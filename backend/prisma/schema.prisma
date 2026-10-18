@@ -1,0 +1,151 @@
+// DocMind-AI — Phase 1 core database schema
+// Prisma ORM 7.x with MySQL 8.x
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ProcessingStatus {
+  UPLOADED
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// -----------------------------------------------------------------------------
+// Users and organizations
+// -----------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  name         String   @db.VarChar(120)
+  email        String   @unique @db.VarChar(191)
+  passwordHash String   @db.VarChar(255)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships OrganizationMember[]
+  documents   Document[]
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(150)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members        OrganizationMember[]
+  knowledgeBases KnowledgeBase[]
+}
+
+model OrganizationMember {
+  id             String           @id @default(cuid())
+  userId         String
+  organizationId String
+  role           OrganizationRole @default(MEMBER)
+  joinedAt       DateTime         @default(now())
+
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+// -----------------------------------------------------------------------------
+// Knowledge bases and uploaded documents
+// -----------------------------------------------------------------------------
+
+model KnowledgeBase {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String   @db.VarChar(200)
+  description    String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  documents    Document[]
+
+  @@index([organizationId])
+}
+
+model Document {
+  id              String    @id @default(cuid())
+  knowledgeBaseId String
+  uploadedById    String
+  title           String    @db.VarChar(255)
+  createdAt       DateTime  @default(now())
+  deletedAt       DateTime?
+
+  knowledgeBase KnowledgeBase     @relation(fields: [knowledgeBaseId], references: [id])
+  uploadedBy    User              @relation(fields: [uploadedById], references: [id])
+  versions      DocumentVersion[]
+
+  @@index([knowledgeBaseId])
+  @@index([uploadedById])
+}
+
+model DocumentVersion {
+  id         String           @id @default(cuid())
+  documentId String
+  version    Int
+  filename   String           @db.VarChar(255)
+  mimeType   String           @db.VarChar(150)
+  sizeBytes  BigInt
+  storageKey String           @unique @db.VarChar(512)
+  status     ProcessingStatus @default(UPLOADED)
+  createdAt  DateTime         @default(now())
+
+  document Document       @relation(fields: [documentId], references: [id])
+  jobs     IngestionJob[]
+
+  @@unique([documentId, version])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// Background ingestion job tracking
+// -----------------------------------------------------------------------------
+
+model IngestionJob {
+  id                String    @id @default(cuid())
+  documentVersionId String
+  status            JobStatus @default(QUEUED)
+  attempts          Int       @default(0)
+  errorMessage      String?   @db.Text
+  createdAt         DateTime  @default(now())
+  startedAt         DateTime?
+  completedAt       DateTime?
+
+  documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([documentVersionId])
+}
