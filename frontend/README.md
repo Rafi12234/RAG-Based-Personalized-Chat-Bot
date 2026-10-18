@@ -1,31 +1,22 @@
 # DocMind-AI Frontend
 
-React/TypeScript dashboard for secure account access, workspaces, knowledge bases, and PDF/DOCX/TXT document management. This is the Phase 1 UI; document question-answering and RAG search are not yet implemented.
+React 19/Vite dashboard for Phase 1 account access, workspaces, team permissions, knowledge base management, and PDF/DOCX/TXT document upload/download/archive.
 
-## Run locally
+Owners and admins can edit or delete **empty** knowledge bases; any knowledge base with document history (including archived documents) is retained. Document extraction, search, and chatbot answers are future phases.
 
+## Run
 From `frontend/`:
-
 ```cmd
-npm install
+npm ci
+copy .env.example .env
 npm run dev
 ```
+Open http://localhost:5173; the API must run on http://localhost:4000.
 
-Open `http://localhost:5173`. The backend must already be running at `http://localhost:4000`.
-
-Optional `frontend/.env` (copy `.env.example`):
-
-```dotenv
-VITE_API_URL=http://localhost:4000
-```
-
-Do not place secret tokens, storage keys, or passwords in Vite environment variables because they are bundled into the client.
-
-## Build
-
+## Verify
 ```cmd
-npm run build
 npm run lint
+npm run build
 ```
 
-For complete Docker, Prisma, and Python setup, see the root `PHASE1_SETUP_WINDOWS.md`.
+Never place secrets into `VITE_*` variables, which are public to the browser. See the root README for the backend/database/worker setup.

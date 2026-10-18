@@ -10,7 +10,7 @@ type User = {
 };
 type Org = { id: string; name: string; role: Role; createdAt: string };
 type KB = { id: string; name: string; description: string | null; _count?: { documents: number } };
-type Doc = { id: string; title: string; createdAt: string;
+type Doc = { id: string; title: string; createdAt: string; uploadedById: string;
   latestVersion: { filename: string; status: string; sizeBytes: number; version: number } | null };
 type Reply<T> = { success: true } & T;
 
@@ -139,6 +139,30 @@ export default function App() {
       setNotice("Knowledge base created.");
     });
   }
+  async function editKB() {
+    if (!baseId || !selectedBase || !isManager) return;
+    const name = window.prompt("Knowledge base name", selectedBase.name);
+    if (name === null) return;
+    const description = window.prompt("Knowledge base description", selectedBase.description ?? "");
+    if (description === null) return;
+    await run(async () => {
+      await api(`/knowledge-bases/${baseId}`, {
+        method: "PATCH", ...jsonBody({ name: name.trim(), description: description.trim() }),
+      });
+      await refreshBases(orgId, baseId);
+      setNotice("Knowledge base updated.");
+    });
+  }
+  async function deleteKB() {
+    if (!baseId || !selectedBase || !isManager) return;
+    if (!window.confirm(`Delete empty knowledge base "${selectedBase.name}"? Knowledge bases with any document history cannot be deleted.`)) return;
+    await run(async () => {
+      await api(`/knowledge-bases/${baseId}`, { method: "DELETE" });
+      setBaseId("");
+      await refreshBases(orgId);
+      setNotice("Empty knowledge base deleted.");
+    });
+  }
   async function inviteMember(e: FormEvent) {
     e.preventDefault();
     await run(async () => {
@@ -228,10 +252,10 @@ export default function App() {
           <div className="stat"><span>Members</span><strong>{members.length}</strong><small>With workspace access</small></div>
         </div>
         <div className="content-grid">
-          <section className="panel wide"><div className="panel-heading"><div><h2>Documents</h2><p className="subtle">{selectedBase ? `${selectedBase.name} · supported formats: PDF, DOCX, TXT` : "Create or select a knowledge base to get started"}</p></div></div>
+          <section className="panel wide"><div className="panel-heading"><div><h2>Documents</h2><p className="subtle">{selectedBase ? `${selectedBase.name} · supported formats: PDF, DOCX, TXT` : "Create or select a knowledge base to get started"}</p></div>{selectedBase && isManager && <div className="panel-actions"><button className="secondary" type="button" disabled={busy} onClick={editKB}>Edit collection</button><button className="secondary" type="button" disabled={busy} onClick={deleteKB}>Delete empty collection</button></div>}</div>
             {baseId ? <>
               <form className="upload-row" onSubmit={uploadDocument}><input id="doc-upload" aria-label="Choose document" type="file" accept=".pdf,.docx,.txt" onChange={e => setUploadFile(e.target.files?.[0] ?? null)} /><button className="primary" disabled={!uploadFile || busy}>{busy ? "Working…" : "Upload document"}</button></form>
-              <div className="table-scroll"><table><thead><tr><th>Name</th><th>Status</th><th>Size</th><th>Uploaded</th><th>Actions</th></tr></thead><tbody>{docs.map(d => <tr key={d.id}><td className="file-cell"><span className="file-icon">▤</span><span>{d.title}</span></td><td><span className="status">{d.latestVersion?.status ?? "UNKNOWN"}</span></td><td>{d.latestVersion ? `${(d.latestVersion.sizeBytes / 1024 / 1024).toFixed(2)} MB` : "—"}</td><td>{new Date(d.createdAt).toLocaleDateString()}</td><td className="action-cell"><button disabled={busy} onClick={() => download(d.id)}>Download</button><button disabled={busy} onClick={() => archive(d.id)}>Archive</button></td></tr>)}{docs.length === 0 && <tr><td colSpan={5} className="empty-row">No files yet. Upload your first document above.</td></tr>}</tbody></table></div>
+              <div className="table-scroll"><table><thead><tr><th>Name</th><th>Status</th><th>Size</th><th>Uploaded</th><th>Actions</th></tr></thead><tbody>{docs.map(d => <tr key={d.id}><td className="file-cell"><span className="file-icon">▤</span><span>{d.title}</span></td><td><span className="status">{d.latestVersion?.status ?? "UNKNOWN"}</span></td><td>{d.latestVersion ? `${(d.latestVersion.sizeBytes / 1024 / 1024).toFixed(2)} MB` : "—"}</td><td>{new Date(d.createdAt).toLocaleDateString()}</td><td className="action-cell"><button disabled={busy} onClick={() => download(d.id)}>Download</button><button disabled={busy || (!isManager && d.uploadedById !== user.id)} title={!isManager && d.uploadedById !== user.id ? "Only the uploader or a manager can archive" : "Archive document"} onClick={() => archive(d.id)}>Archive</button></td></tr>)}{docs.length === 0 && <tr><td colSpan={5} className="empty-row">No files yet. Upload your first document above.</td></tr>}</tbody></table></div>
             </> : <div className="blank-state">Select or create a knowledge base to upload documents.</div>}
           </section>
           <section className="panel"><h2>New knowledge base</h2><p className="subtle">Organize documents into collections.</p>{isManager ? <form className="stack" onSubmit={createKB}><label>Collection name<input required minLength={2} maxLength={200} value={baseName} onChange={e => setBaseName(e.target.value)} placeholder="Project documentation" /></label><label>Description<textarea value={baseDescription} onChange={e => setBaseDescription(e.target.value)} maxLength={5000} placeholder="Optional description" rows={3} /></label><button className="primary" disabled={busy || !orgId}>Create knowledge base</button></form> : <p className="subtle">Only owners and admins can create collections.</p>}</section>
