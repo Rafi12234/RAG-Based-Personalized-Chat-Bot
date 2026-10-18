@@ -1,60 +1,38 @@
-
 import app from "./app.js";
 import { env } from "./config/env.js";
 import { prisma } from "./config/prisma.js";
 
 async function startServer() {
-  // Verify database connectivity before starting HTTP server
   await prisma.$connect();
-
-  console.log("Database connection established");
+  console.log("MySQL connection established");
 
   const server = app.listen(env.PORT, () => {
-    console.log(
-      `DocMind-AI API running at http://localhost:${env.PORT}`,
-    );
+    console.log(`DocMind-AI API listening at http://localhost:${env.PORT}`);
   });
-
   let shuttingDown = false;
 
-  function shutdown(signal: string) {
+  const shutdown = (signal: string) => {
     if (shuttingDown) return;
-
     shuttingDown = true;
-    console.log(`Received ${signal}. Shutting down...`);
-
-    server.close(async (error) => {
-      let exitCode = error ? 1 : 0;
-
-      if (error) {
-        console.error("HTTP shutdown error:", error);
-      }
-
-      try {
-        await prisma.$disconnect();
-        console.log("Database disconnected");
-      } catch (disconnectError) {
-        console.error(
-          "Database disconnect failed:",
-          disconnectError,
-        );
-        exitCode = 1;
-      }
-
-      process.exit(exitCode);
+    console.log(`${signal}: shutting down`);
+    const timeout = setTimeout(() => {
+      console.error("Grace period exceeded; closing active connections");
+      server.closeAllConnections();
+    }, 10_000);
+    timeout.unref();
+    server.close(async error => {
+      clearTimeout(timeout);
+      try { await prisma.$disconnect(); }
+      catch (disconnectError) { console.error("Prisma disconnect failed", disconnectError); process.exitCode = 1; }
+      if (error) { console.error("HTTP shutdown failed", error); process.exitCode = 1; }
     });
-
-    server.closeAllConnections();
-  }
-
+  };
   process.once("SIGINT", () => shutdown("SIGINT"));
   process.once("SIGTERM", () => shutdown("SIGTERM"));
 }
 
-startServer().catch(async (error) => {
-  console.error("Unable to start DocMind-AI API:", error);
-
+startServer().catch(async error => {
+  console.error("Failed to start API:", error);
   await prisma.$disconnect().catch(() => {});
-
   process.exitCode = 1;
 });
