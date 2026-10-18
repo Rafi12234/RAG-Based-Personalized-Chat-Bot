@@ -81,3 +81,7 @@ td { padding: 15px 11px; border-top: 1px solid #edf1f6; color: #54637b; }
 .member span { font-size: 10px; background: #edf2fa; padding: 5px 8px; border-radius: 7px; font-weight: 750; color: #62799f; }
 @media (max-width: 950px) { .app-shell { grid-template-columns: 200px minmax(0,1fr); } .content-grid { grid-template-columns: 1fr; } .panel.wide { grid-column: auto; } .topbar { align-items: flex-start; } }
 @media (max-width: 650px) { .app-shell { display: block; } .sidebar { min-height: 0; padding: 12px 14px; } .side-brand { padding: 0; } .side-caption { margin: 12px 0 6px; } .side-label { padding: 4px 0; } .base-nav { flex-direction: row; overflow-x: auto; padding-bottom: 5px; } .base-nav button { flex: 0 0 auto; width: auto; } .side-profile { padding: 10px 0 0; margin-top: 7px; } .main-content { padding: 24px 14px; } .stage-label { display: none; } .stat-grid { gap: 7px; } .stat { padding: 13px 10px; } .stat strong { font-size: 23px; } .stat span,.stat small { font-size: 10px; } .upload-row { flex-direction: column; align-items: stretch; } .auth-panel { padding: 24px; } }
+
+.panel-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.panel-actions .secondary { font-size: 12px; padding: 8px 11px; }
+@media (max-width: 650px) { .panel-heading { flex-direction: column; } }

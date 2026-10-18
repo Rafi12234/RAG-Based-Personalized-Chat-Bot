@@ -24,6 +24,10 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, _ne
     });
     return;
   }
+  if (error && typeof error === "object" && "code" in error && error.code === "P2003") {
+    res.status(409).json({ success: false, message: "Resource has dependent records" });
+    return;
+  }
   if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
     res.status(409).json({ success: false, message: "A record with those details already exists" });
     return;

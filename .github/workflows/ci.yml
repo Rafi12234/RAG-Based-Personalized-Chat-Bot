@@ -6,10 +6,26 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: exampleRootPassword
+          MYSQL_DATABASE: docmind_ai
+          MYSQL_USER: docmind_app
+          MYSQL_PASSWORD: example
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pexampleRootPassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
     env:
       DATABASE_URL: mysql://docmind_app:example@127.0.0.1:3307/docmind_ai
       SHADOW_DATABASE_URL: mysql://docmind_app:example@127.0.0.1:3307/docmind_ai_shadow
       NODE_ENV: test
+      FRONTEND_URL: http://localhost:5173
       DATABASE_HOST: 127.0.0.1
       DATABASE_PORT: 3307
       DATABASE_USER: docmind_app
@@ -25,15 +41,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      # The patch ships package.json only; npm install regenerates the lockfile.
-      # Once backend/package-lock.json is committed, switch to npm ci.
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
       - name: Install dependencies
-        run: cd backend && npm install
+        run: cd backend && npm ci
       - name: Generate Prisma client
         run: cd backend && npx prisma generate
       - name: Validate Prisma schema
         run: cd backend && npx prisma validate
-      - name: Check backend
+      - name: Apply database migrations
+        run: cd backend && npx prisma migrate deploy
+      - name: Check backend and integration tests
         run: cd backend && npm run typecheck && npm run build && npm test
 
   frontend:
@@ -43,8 +61,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Build React app
-        run: cd frontend && npm ci && npm run build
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Check React app
+        run: cd frontend && npm ci && npm run lint && npm run build
 
   python:
     runs-on: ubuntu-latest
