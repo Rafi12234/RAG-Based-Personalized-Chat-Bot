@@ -84,16 +84,22 @@ export default function App() {
       .finally(() => setLoading(false));
   }, []);
   useEffect(() => {
-    if (user) refreshOrgs().catch(report);
+    if (user) {
+      void Promise.resolve().then(() => refreshOrgs().catch(report));
+    }
   }, [user]);
   useEffect(() => {
     if (orgId) {
-      refreshBases(orgId).catch(report);
-      refreshMembers(orgId).catch(report);
+      void Promise.resolve().then(() => Promise.all([
+        refreshBases(orgId),
+        refreshMembers(orgId),
+      ]).catch(report));
     }
   }, [orgId]);
   useEffect(() => {
-    if (baseId) refreshDocuments(baseId).catch(report);
+    if (baseId) {
+      void Promise.resolve().then(() => refreshDocuments(baseId).catch(report));
+    }
   }, [baseId]);
 
   async function submitAuth(e: FormEvent<HTMLFormElement>) {
