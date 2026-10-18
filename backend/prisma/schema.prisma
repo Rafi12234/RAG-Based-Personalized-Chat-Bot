@@ -1,6 +1,4 @@
-// DocMind-AI — Phase 1 core database schema
-// Prisma ORM 7.x with MySQL 8.x
-
+// DocMind-AI — Phase 1 relational data model (Prisma 7 / MySQL 8)
 generator client {
   provider            = "prisma-client"
   output              = "../src/generated/prisma"
@@ -11,10 +9,6 @@ generator client {
 datasource db {
   provider = "mysql"
 }
-
-// -----------------------------------------------------------------------------
-// Enums
-// -----------------------------------------------------------------------------
 
 enum OrganizationRole {
   OWNER
@@ -37,10 +31,6 @@ enum JobStatus {
   FAILED
 }
 
-// -----------------------------------------------------------------------------
-// Users and organizations
-// -----------------------------------------------------------------------------
-
 model User {
   id           String   @id @default(cuid())
   name         String   @db.VarChar(120)
@@ -52,6 +42,20 @@ model User {
 
   memberships OrganizationMember[]
   documents   Document[]
+  sessions    AuthSession[]
+}
+
+model AuthSession {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique @db.Char(64)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Organization {
@@ -77,10 +81,6 @@ model OrganizationMember {
   @@unique([userId, organizationId])
   @@index([organizationId])
 }
-
-// -----------------------------------------------------------------------------
-// Knowledge bases and uploaded documents
-// -----------------------------------------------------------------------------
 
 model KnowledgeBase {
   id             String   @id @default(cuid())
@@ -129,10 +129,6 @@ model DocumentVersion {
   @@unique([documentId, version])
   @@index([status])
 }
-
-// -----------------------------------------------------------------------------
-// Background ingestion job tracking
-// -----------------------------------------------------------------------------
 
 model IngestionJob {
   id                String    @id @default(cuid())
