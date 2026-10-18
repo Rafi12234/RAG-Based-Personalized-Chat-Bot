@@ -84,17 +84,15 @@ export default function App() {
       .finally(() => setLoading(false));
   }, []);
   useEffect(() => {
-    if (!user) { setOrgs([]); setOrgId(""); return; }
-    refreshOrgs().catch(report);
-  }, [user?.id]);
+    if (user) refreshOrgs().catch(report);
+  }, [user]);
   useEffect(() => {
-    setBases([]); setBaseId(""); setDocs([]); setMembers([]); setMemberRole("MEMBER");
-    if (!orgId) return;
-    refreshBases(orgId).catch(report);
-    refreshMembers(orgId).catch(report);
+    if (orgId) {
+      refreshBases(orgId).catch(report);
+      refreshMembers(orgId).catch(report);
+    }
   }, [orgId]);
   useEffect(() => {
-    setDocs([]); setUploadFile(null);
     if (baseId) refreshDocuments(baseId).catch(report);
   }, [baseId]);
 
@@ -116,6 +114,7 @@ export default function App() {
     await run(async () => {
       await api("/auth/logout", { method: "POST" });
       setUser(null); setPassword(""); setNotice("You have signed out.");
+      setOrgs([]); setOrgId(""); setBases([]); setBaseId(""); setDocs([]); setMembers([]);
     });
   }
   async function createOrg(e: FormEvent) {
@@ -231,13 +230,13 @@ export default function App() {
         <div className="side-brand"><span className="brand-mark">D</span> DocMind<span>AI</span></div>
         <p className="side-caption">DOCUMENT WORKSPACE</p>
         <label className="side-label">Active workspace
-          <select value={orgId} onChange={e => setOrgId(e.target.value)}>
+          <select value={orgId} onChange={e => { setOrgId(e.target.value); setBases([]); setBaseId(""); setDocs([]); setMembers([]); setUploadFile(null); }}>
             {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
         </label>
         <p className="side-caption">KNOWLEDGE BASES</p>
         <nav className="base-nav" aria-label="Knowledge bases">
-          {bases.map(b => <button key={b.id} className={b.id === baseId ? "selected" : ""} onClick={() => setBaseId(b.id)}><span className="small-icon">▤</span>{b.name}<span className="base-count">{b._count?.documents ?? 0}</span></button>)}
+          {bases.map(b => <button key={b.id} className={b.id === baseId ? "selected" : ""} onClick={() => { setBaseId(b.id); setDocs([]); setUploadFile(null); }}><span className="small-icon">▤</span>{b.name}<span className="base-count">{b._count?.documents ?? 0}</span></button>)}
           {bases.length === 0 && <p className="side-empty">No knowledge bases yet</p>}
         </nav>
         <div className="side-profile"><div className="avatar">{user.name.slice(0, 1).toUpperCase()}</div><div className="side-user"><strong>{user.name}</strong><small>{user.email}</small></div><button title="Sign out" className="icon-button" onClick={logout} disabled={busy}>↪</button></div>
