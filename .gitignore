@@ -5,3 +5,8 @@ dist/
 !.env.example
 .venv/
 __pycache__/
+*.pyc
+.pytest_cache/
+coverage/
+.DS_Store
+backend/src/generated/prisma/
