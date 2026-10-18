@@ -49,7 +49,8 @@ knowledgeBasesRouter.delete("/:knowledgeBaseId", async (req, res) => {
   const { membership } = await accessibleKnowledgeBase(currentUserId(req), id);
   requireManager(membership.role);
   const count = await prisma.document.count({ where: { knowledgeBaseId: id } });
-  if (count > 0) throw new HttpError(409, "Knowledge base contains documents; archive or retain it instead");
+  // Archived documents still have history and object-store data. Never silently cascade-delete it.
+  if (count > 0) throw new HttpError(409, "Knowledge base contains document history, including archived documents; retention/purge must run before deletion");
   await prisma.knowledgeBase.delete({ where: { id } });
   res.json({ success: true });
 });

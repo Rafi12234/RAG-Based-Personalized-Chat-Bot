@@ -78,8 +78,20 @@ knowledgeBaseDocumentsRouter.get("/:knowledgeBaseId/documents", async (req, res)
   res.json({ success: true, documents: documents.map(serializeDocument) });
 });
 
-knowledgeBaseDocumentsRouter.post("/:knowledgeBaseId/documents", uploadLimiter, upload.single("file"), async (req, res) => {
-  // Important: route auth runs before multer because the router's requireAuth is registered above.
+// Reject unauthorized knowledge bases BEFORE Multer writes the request body to disk.
+knowledgeBaseDocumentsRouter.post(
+  "/:knowledgeBaseId/documents",
+  uploadLimiter,
+  async (req, _res, next) => {
+    try {
+      await accessibleKnowledgeBase(currentUserId(req), String(req.params.knowledgeBaseId));
+      next();
+    } catch (error) {
+      next(error);
+    }
+  },
+  upload.single("file"),
+  async (req, res) => {
   const knowledgeBaseId = String(req.params.knowledgeBaseId);
   const file = req.file;
   if (!file) throw new HttpError(400, "A file field named 'file' is required");
@@ -130,12 +142,12 @@ async function permittedDocument(userId: string, id: string) {
     include: { knowledgeBase: { select: { organizationId: true } } },
   });
   if (!document) throw new HttpError(404, "Document not found");
-  await membershipFor(userId, document.knowledgeBase.organizationId);
-  return document;
+  const membership = await membershipFor(userId, document.knowledgeBase.organizationId);
+  return { document, membership };
 }
 
 documentsRouter.get("/:documentId/download", async (req, res) => {
-  const document = await permittedDocument(currentUserId(req), String(req.params.documentId));
+  const { document } = await permittedDocument(currentUserId(req), String(req.params.documentId));
   const version = await prisma.documentVersion.findFirst({
     where: { documentId: document.id }, orderBy: { version: "desc" },
   });
@@ -150,7 +162,10 @@ documentsRouter.get("/:documentId/download", async (req, res) => {
 });
 
 documentsRouter.delete("/:documentId", async (req, res) => {
-  const document = await permittedDocument(currentUserId(req), String(req.params.documentId));
+  const { document, membership } = await permittedDocument(currentUserId(req), String(req.params.documentId));
+  if (membership.role === "MEMBER" && document.uploadedById !== currentUserId(req)) {
+    throw new HttpError(403, "Only the uploader or a workspace manager can archive this document");
+  }
   // Phase 1 intentionally uses logical deletion. A separate retention/purge job must
   // delete object-store bytes later; archived documents are never served by these APIs.
   await prisma.document.update({ where: { id: document.id }, data: { deletedAt: new Date() } });
