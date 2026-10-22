@@ -28,10 +28,12 @@ export type AggregateIngestionJob = {
 
 export type IngestionJobAvgAggregateOutputType = {
   attempts: number | null
+  dispatchAttempts: number | null
 }
 
 export type IngestionJobSumAggregateOutputType = {
   attempts: number | null
+  dispatchAttempts: number | null
 }
 
 export type IngestionJobMinAggregateOutputType = {
@@ -43,6 +45,11 @@ export type IngestionJobMinAggregateOutputType = {
   createdAt: Date | null
   startedAt: Date | null
   completedAt: Date | null
+  dispatchLeaseUntil: Date | null
+  dispatchAttempts: number | null
+  processingLeaseUntil: Date | null
+  processingToken: string | null
+  nextAttemptAt: Date | null
 }
 
 export type IngestionJobMaxAggregateOutputType = {
@@ -54,6 +61,11 @@ export type IngestionJobMaxAggregateOutputType = {
   createdAt: Date | null
   startedAt: Date | null
   completedAt: Date | null
+  dispatchLeaseUntil: Date | null
+  dispatchAttempts: number | null
+  processingLeaseUntil: Date | null
+  processingToken: string | null
+  nextAttemptAt: Date | null
 }
 
 export type IngestionJobCountAggregateOutputType = {
@@ -65,16 +77,23 @@ export type IngestionJobCountAggregateOutputType = {
   createdAt: number
   startedAt: number
   completedAt: number
+  dispatchLeaseUntil: number
+  dispatchAttempts: number
+  processingLeaseUntil: number
+  processingToken: number
+  nextAttemptAt: number
   _all: number
 }
 
 
 export type IngestionJobAvgAggregateInputType = {
   attempts?: true
+  dispatchAttempts?: true
 }
 
 export type IngestionJobSumAggregateInputType = {
   attempts?: true
+  dispatchAttempts?: true
 }
 
 export type IngestionJobMinAggregateInputType = {
@@ -86,6 +105,11 @@ export type IngestionJobMinAggregateInputType = {
   createdAt?: true
   startedAt?: true
   completedAt?: true
+  dispatchLeaseUntil?: true
+  dispatchAttempts?: true
+  processingLeaseUntil?: true
+  processingToken?: true
+  nextAttemptAt?: true
 }
 
 export type IngestionJobMaxAggregateInputType = {
@@ -97,6 +121,11 @@ export type IngestionJobMaxAggregateInputType = {
   createdAt?: true
   startedAt?: true
   completedAt?: true
+  dispatchLeaseUntil?: true
+  dispatchAttempts?: true
+  processingLeaseUntil?: true
+  processingToken?: true
+  nextAttemptAt?: true
 }
 
 export type IngestionJobCountAggregateInputType = {
@@ -108,6 +137,11 @@ export type IngestionJobCountAggregateInputType = {
   createdAt?: true
   startedAt?: true
   completedAt?: true
+  dispatchLeaseUntil?: true
+  dispatchAttempts?: true
+  processingLeaseUntil?: true
+  processingToken?: true
+  nextAttemptAt?: true
   _all?: true
 }
 
@@ -206,6 +240,11 @@ export type IngestionJobGroupByOutputType = {
   createdAt: Date
   startedAt: Date | null
   completedAt: Date | null
+  dispatchLeaseUntil: Date | null
+  dispatchAttempts: number
+  processingLeaseUntil: Date | null
+  processingToken: string | null
+  nextAttemptAt: Date | null
   _count: IngestionJobCountAggregateOutputType | null
   _avg: IngestionJobAvgAggregateOutputType | null
   _sum: IngestionJobSumAggregateOutputType | null
@@ -240,6 +279,11 @@ export type IngestionJobWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"IngestionJob"> | Date | string
   startedAt?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
+  dispatchLeaseUntil?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
+  dispatchAttempts?: Prisma.IntFilter<"IngestionJob"> | number
+  processingLeaseUntil?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
+  processingToken?: Prisma.StringNullableFilter<"IngestionJob"> | string | null
+  nextAttemptAt?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
   documentVersion?: Prisma.XOR<Prisma.DocumentVersionScalarRelationFilter, Prisma.DocumentVersionWhereInput>
 }
 
@@ -252,6 +296,11 @@ export type IngestionJobOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  dispatchLeaseUntil?: Prisma.SortOrderInput | Prisma.SortOrder
+  dispatchAttempts?: Prisma.SortOrder
+  processingLeaseUntil?: Prisma.SortOrderInput | Prisma.SortOrder
+  processingToken?: Prisma.SortOrderInput | Prisma.SortOrder
+  nextAttemptAt?: Prisma.SortOrderInput | Prisma.SortOrder
   documentVersion?: Prisma.DocumentVersionOrderByWithRelationInput
   _relevance?: Prisma.IngestionJobOrderByRelevanceInput
 }
@@ -268,6 +317,11 @@ export type IngestionJobWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"IngestionJob"> | Date | string
   startedAt?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
+  dispatchLeaseUntil?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
+  dispatchAttempts?: Prisma.IntFilter<"IngestionJob"> | number
+  processingLeaseUntil?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
+  processingToken?: Prisma.StringNullableFilter<"IngestionJob"> | string | null
+  nextAttemptAt?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
   documentVersion?: Prisma.XOR<Prisma.DocumentVersionScalarRelationFilter, Prisma.DocumentVersionWhereInput>
 }, "id">
 
@@ -280,6 +334,11 @@ export type IngestionJobOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  dispatchLeaseUntil?: Prisma.SortOrderInput | Prisma.SortOrder
+  dispatchAttempts?: Prisma.SortOrder
+  processingLeaseUntil?: Prisma.SortOrderInput | Prisma.SortOrder
+  processingToken?: Prisma.SortOrderInput | Prisma.SortOrder
+  nextAttemptAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.IngestionJobCountOrderByAggregateInput
   _avg?: Prisma.IngestionJobAvgOrderByAggregateInput
   _max?: Prisma.IngestionJobMaxOrderByAggregateInput
@@ -299,6 +358,11 @@ export type IngestionJobScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"IngestionJob"> | Date | string
   startedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"IngestionJob"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"IngestionJob"> | Date | string | null
+  dispatchLeaseUntil?: Prisma.DateTimeNullableWithAggregatesFilter<"IngestionJob"> | Date | string | null
+  dispatchAttempts?: Prisma.IntWithAggregatesFilter<"IngestionJob"> | number
+  processingLeaseUntil?: Prisma.DateTimeNullableWithAggregatesFilter<"IngestionJob"> | Date | string | null
+  processingToken?: Prisma.StringNullableWithAggregatesFilter<"IngestionJob"> | string | null
+  nextAttemptAt?: Prisma.DateTimeNullableWithAggregatesFilter<"IngestionJob"> | Date | string | null
 }
 
 export type IngestionJobCreateInput = {
@@ -309,6 +373,11 @@ export type IngestionJobCreateInput = {
   createdAt?: Date | string
   startedAt?: Date | string | null
   completedAt?: Date | string | null
+  dispatchLeaseUntil?: Date | string | null
+  dispatchAttempts?: number
+  processingLeaseUntil?: Date | string | null
+  processingToken?: string | null
+  nextAttemptAt?: Date | string | null
   documentVersion: Prisma.DocumentVersionCreateNestedOneWithoutJobsInput
 }
 
@@ -321,6 +390,11 @@ export type IngestionJobUncheckedCreateInput = {
   createdAt?: Date | string
   startedAt?: Date | string | null
   completedAt?: Date | string | null
+  dispatchLeaseUntil?: Date | string | null
+  dispatchAttempts?: number
+  processingLeaseUntil?: Date | string | null
+  processingToken?: string | null
+  nextAttemptAt?: Date | string | null
 }
 
 export type IngestionJobUpdateInput = {
@@ -331,6 +405,11 @@ export type IngestionJobUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  processingLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  processingToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   documentVersion?: Prisma.DocumentVersionUpdateOneRequiredWithoutJobsNestedInput
 }
 
@@ -343,6 +422,11 @@ export type IngestionJobUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  processingLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  processingToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type IngestionJobCreateManyInput = {
@@ -354,6 +438,11 @@ export type IngestionJobCreateManyInput = {
   createdAt?: Date | string
   startedAt?: Date | string | null
   completedAt?: Date | string | null
+  dispatchLeaseUntil?: Date | string | null
+  dispatchAttempts?: number
+  processingLeaseUntil?: Date | string | null
+  processingToken?: string | null
+  nextAttemptAt?: Date | string | null
 }
 
 export type IngestionJobUpdateManyMutationInput = {
@@ -364,6 +453,11 @@ export type IngestionJobUpdateManyMutationInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  processingLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  processingToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type IngestionJobUncheckedUpdateManyInput = {
@@ -375,6 +469,11 @@ export type IngestionJobUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  processingLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  processingToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type IngestionJobListRelationFilter = {
@@ -402,10 +501,16 @@ export type IngestionJobCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
+  dispatchLeaseUntil?: Prisma.SortOrder
+  dispatchAttempts?: Prisma.SortOrder
+  processingLeaseUntil?: Prisma.SortOrder
+  processingToken?: Prisma.SortOrder
+  nextAttemptAt?: Prisma.SortOrder
 }
 
 export type IngestionJobAvgOrderByAggregateInput = {
   attempts?: Prisma.SortOrder
+  dispatchAttempts?: Prisma.SortOrder
 }
 
 export type IngestionJobMaxOrderByAggregateInput = {
@@ -417,6 +522,11 @@ export type IngestionJobMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
+  dispatchLeaseUntil?: Prisma.SortOrder
+  dispatchAttempts?: Prisma.SortOrder
+  processingLeaseUntil?: Prisma.SortOrder
+  processingToken?: Prisma.SortOrder
+  nextAttemptAt?: Prisma.SortOrder
 }
 
 export type IngestionJobMinOrderByAggregateInput = {
@@ -428,10 +538,16 @@ export type IngestionJobMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
+  dispatchLeaseUntil?: Prisma.SortOrder
+  dispatchAttempts?: Prisma.SortOrder
+  processingLeaseUntil?: Prisma.SortOrder
+  processingToken?: Prisma.SortOrder
+  nextAttemptAt?: Prisma.SortOrder
 }
 
 export type IngestionJobSumOrderByAggregateInput = {
   attempts?: Prisma.SortOrder
+  dispatchAttempts?: Prisma.SortOrder
 }
 
 export type IngestionJobCreateNestedManyWithoutDocumentVersionInput = {
@@ -488,6 +604,11 @@ export type IngestionJobCreateWithoutDocumentVersionInput = {
   createdAt?: Date | string
   startedAt?: Date | string | null
   completedAt?: Date | string | null
+  dispatchLeaseUntil?: Date | string | null
+  dispatchAttempts?: number
+  processingLeaseUntil?: Date | string | null
+  processingToken?: string | null
+  nextAttemptAt?: Date | string | null
 }
 
 export type IngestionJobUncheckedCreateWithoutDocumentVersionInput = {
@@ -498,6 +619,11 @@ export type IngestionJobUncheckedCreateWithoutDocumentVersionInput = {
   createdAt?: Date | string
   startedAt?: Date | string | null
   completedAt?: Date | string | null
+  dispatchLeaseUntil?: Date | string | null
+  dispatchAttempts?: number
+  processingLeaseUntil?: Date | string | null
+  processingToken?: string | null
+  nextAttemptAt?: Date | string | null
 }
 
 export type IngestionJobCreateOrConnectWithoutDocumentVersionInput = {
@@ -538,6 +664,11 @@ export type IngestionJobScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"IngestionJob"> | Date | string
   startedAt?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
+  dispatchLeaseUntil?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
+  dispatchAttempts?: Prisma.IntFilter<"IngestionJob"> | number
+  processingLeaseUntil?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
+  processingToken?: Prisma.StringNullableFilter<"IngestionJob"> | string | null
+  nextAttemptAt?: Prisma.DateTimeNullableFilter<"IngestionJob"> | Date | string | null
 }
 
 export type IngestionJobCreateManyDocumentVersionInput = {
@@ -548,6 +679,11 @@ export type IngestionJobCreateManyDocumentVersionInput = {
   createdAt?: Date | string
   startedAt?: Date | string | null
   completedAt?: Date | string | null
+  dispatchLeaseUntil?: Date | string | null
+  dispatchAttempts?: number
+  processingLeaseUntil?: Date | string | null
+  processingToken?: string | null
+  nextAttemptAt?: Date | string | null
 }
 
 export type IngestionJobUpdateWithoutDocumentVersionInput = {
@@ -558,6 +694,11 @@ export type IngestionJobUpdateWithoutDocumentVersionInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  processingLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  processingToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type IngestionJobUncheckedUpdateWithoutDocumentVersionInput = {
@@ -568,6 +709,11 @@ export type IngestionJobUncheckedUpdateWithoutDocumentVersionInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  processingLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  processingToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type IngestionJobUncheckedUpdateManyWithoutDocumentVersionInput = {
@@ -578,6 +724,11 @@ export type IngestionJobUncheckedUpdateManyWithoutDocumentVersionInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dispatchAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  processingLeaseUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  processingToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nextAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 
@@ -591,6 +742,11 @@ export type IngestionJobSelect<ExtArgs extends runtime.Types.Extensions.Internal
   createdAt?: boolean
   startedAt?: boolean
   completedAt?: boolean
+  dispatchLeaseUntil?: boolean
+  dispatchAttempts?: boolean
+  processingLeaseUntil?: boolean
+  processingToken?: boolean
+  nextAttemptAt?: boolean
   documentVersion?: boolean | Prisma.DocumentVersionDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["ingestionJob"]>
 
@@ -605,9 +761,14 @@ export type IngestionJobSelectScalar = {
   createdAt?: boolean
   startedAt?: boolean
   completedAt?: boolean
+  dispatchLeaseUntil?: boolean
+  dispatchAttempts?: boolean
+  processingLeaseUntil?: boolean
+  processingToken?: boolean
+  nextAttemptAt?: boolean
 }
 
-export type IngestionJobOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "documentVersionId" | "status" | "attempts" | "errorMessage" | "createdAt" | "startedAt" | "completedAt", ExtArgs["result"]["ingestionJob"]>
+export type IngestionJobOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "documentVersionId" | "status" | "attempts" | "errorMessage" | "createdAt" | "startedAt" | "completedAt" | "dispatchLeaseUntil" | "dispatchAttempts" | "processingLeaseUntil" | "processingToken" | "nextAttemptAt", ExtArgs["result"]["ingestionJob"]>
 export type IngestionJobInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   documentVersion?: boolean | Prisma.DocumentVersionDefaultArgs<ExtArgs>
 }
@@ -626,6 +787,11 @@ export type $IngestionJobPayload<ExtArgs extends runtime.Types.Extensions.Intern
     createdAt: Date
     startedAt: Date | null
     completedAt: Date | null
+    dispatchLeaseUntil: Date | null
+    dispatchAttempts: number
+    processingLeaseUntil: Date | null
+    processingToken: string | null
+    nextAttemptAt: Date | null
   }, ExtArgs["result"]["ingestionJob"]>
   composites: {}
 }
@@ -1004,6 +1170,11 @@ export interface IngestionJobFieldRefs {
   readonly createdAt: Prisma.FieldRef<"IngestionJob", 'DateTime'>
   readonly startedAt: Prisma.FieldRef<"IngestionJob", 'DateTime'>
   readonly completedAt: Prisma.FieldRef<"IngestionJob", 'DateTime'>
+  readonly dispatchLeaseUntil: Prisma.FieldRef<"IngestionJob", 'DateTime'>
+  readonly dispatchAttempts: Prisma.FieldRef<"IngestionJob", 'Int'>
+  readonly processingLeaseUntil: Prisma.FieldRef<"IngestionJob", 'DateTime'>
+  readonly processingToken: Prisma.FieldRef<"IngestionJob", 'String'>
+  readonly nextAttemptAt: Prisma.FieldRef<"IngestionJob", 'DateTime'>
 }
     
 
