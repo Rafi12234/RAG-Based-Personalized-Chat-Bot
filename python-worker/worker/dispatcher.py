@@ -1,116 +1,147 @@
+"""One-shot diagnostic dispatcher with transactional MySQL dispatch leases.
 
-"""Dispatch queued DocMind-AI ingestion jobs to Celery.
+Default CLI mode is a rollback-only preview: no Celery messages and no
+persistent database changes. --publish is explicit and sends only the
+read-only docmind.ingestion.inspect diagnostic task.
 
-Milestone 2.1B: one-shot diagnostic dispatcher.
-No database statuses are changed by this module.
+Do NOT enable continuous dispatch until real document ingestion exists.
 """
 
+import argparse
 import logging
 import sys
 
 from .celery_app import celery_app
 from .db import get_connection
-
+from .ingestion_dispatch_lease import (
+    release_dispatch_lease,
+    reserve_dispatch_batch,
+)
 
 LOGGER = logging.getLogger("docmind.dispatcher")
-
 TASK_NAME = "docmind.ingestion.inspect"
 QUEUE_NAME = "docmind_phase2"
 BATCH_SIZE = 25
+DISPATCH_LEASE_SECONDS = 120
 
 
-def find_queued_jobs() -> list[str]:
-    """Find queued jobs belonging to active documents."""
+def reserve_once(*, batch_size: int = BATCH_SIZE, job_id: str | None = None,
+                 persist: bool = False) -> list[dict]:
+    """Reserve a batch, committing only when explicitly requested.
+
+    The reservation is committed BEFORE publishing to Redis. If the
+    process exits after commit and before publication, the lease can
+    expire and the job can be considered again on a later run.
+    """
     connection = get_connection()
-
     try:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT j.id
-                FROM IngestionJob AS j
-                INNER JOIN DocumentVersion AS v
-                    ON v.id = j.documentVersionId
-                INNER JOIN Document AS d
-                    ON d.id = v.documentId
-                WHERE j.status = 'QUEUED'
-                  AND v.status = 'QUEUED'
-                  AND d.deletedAt IS NULL
-                ORDER BY j.createdAt ASC, j.id ASC
-                LIMIT %s
-                """,
-                (BATCH_SIZE,),
-            )
-
-            rows = cursor.fetchall()
-            return [row["id"] for row in rows]
-
+        connection.begin()
+        reservations = reserve_dispatch_batch(
+            connection,
+            batch_size=batch_size,
+            lease_seconds=DISPATCH_LEASE_SECONDS,
+            job_id=job_id,
+        )
+        if persist:
+            connection.commit()
+        else:
+            connection.rollback()
+        return reservations
+    except Exception:
+        connection.rollback()
+        raise
     finally:
         connection.close()
 
 
-def dispatch_once() -> int:
-    """Publish one batch of pending jobs for diagnostic inspection."""
-    job_ids = find_queued_jobs()
+def release_failed_publication(job_id: str, lease_until) -> bool:
+    """Release only the precise reservation whose publication failed."""
+    connection = get_connection()
+    try:
+        connection.begin()
+        released = release_dispatch_lease(connection, job_id, lease_until)
+        connection.commit()
+        return released
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
-    if not job_ids:
-        LOGGER.info("No queued ingestion jobs found.")
-        return 0
 
-    LOGGER.info("Found %d queued ingestion job(s).", len(job_ids))
+def dispatch_once(*, publish: bool = False, batch_size: int = BATCH_SIZE,
+                  job_id: str | None = None) -> dict[str, int]:
+    """Preview dispatch or explicitly publish a one-shot diagnostic batch.
 
-    published = 0
+    In preview mode, all MySQL changes are rolled back and NO Redis
+    messages are sent. In publish mode, a temporary lease prevents
+    immediate redispatch; publishing does not process the document.
+    """
+    reservations = reserve_once(
+        batch_size=batch_size, job_id=job_id, persist=publish
+    )
+    results = {"reserved": len(reservations), "published": 0, "failed": 0}
 
-    for job_id in job_ids:
+    if not publish:
+        LOGGER.info(
+            "PREVIEW: %d eligible job(s), no database changes and no Redis messages",
+            len(reservations),
+        )
+        for reservation in reservations:
+            LOGGER.info("PREVIEW job=%s", reservation["job_id"])
+        return results
+
+    for reservation in reservations:
+        reserved_job_id = reservation["job_id"]
         try:
             task = celery_app.send_task(
                 TASK_NAME,
-                args=[job_id],
+                args=[reserved_job_id],
                 queue=QUEUE_NAME,
                 retry=False,
             )
-
-            published += 1
+            results["published"] += 1
             LOGGER.info(
-                "Published job=%s task=%s queue=%s",
-                job_id,
-                task.id,
-                QUEUE_NAME,
+                "Published diagnostic job=%s task=%s queue=%s",
+                reserved_job_id, task.id, QUEUE_NAME,
             )
-
         except Exception:
-            LOGGER.exception(
-                "Could not publish ingestion job %s",
-                job_id,
+            results["failed"] += 1
+            LOGGER.exception("Diagnostic publish failed for job=%s", reserved_job_id)
+            # Publishing could be ambiguous after a connection problem;
+            # downstream job claiming must always remain idempotent.
+            released = release_failed_publication(
+                reserved_job_id, reservation["lease_until"]
             )
+            if not released:
+                LOGGER.warning(
+                    "Could not release job=%s: its lease was replaced or the job changed",
+                    reserved_job_id,
+                )
+    return results
 
-    LOGGER.info(
-        "Dispatch finished: %d/%d tasks published.",
-        published,
-        len(job_ids),
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--publish", action="store_true",
+        help="Commit temporary leases and publish read-only Celery diagnostics",
     )
-
-    if published != len(job_ids):
-        raise RuntimeError(
-            "One or more ingestion jobs could not be published."
-        )
-
-    return published
-
-
-def main() -> int:
+    parser.add_argument("--job-id", default=None, help="Limit to one ingestion job")
+    parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    args = parser.parse_args(argv)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-
     try:
-        count = dispatch_once()
-        LOGGER.info("Successfully published %d task(s).", count)
-        return 0
-
-    except Exception:
-        LOGGER.exception("Dispatcher failed.")
+        result = dispatch_once(
+            publish=args.publish, batch_size=args.batch_size, job_id=args.job_id
+        )
+        LOGGER.info("Dispatch result: %s", result)
+        return 1 if result["failed"] else 0
+    except (Exception, KeyboardInterrupt):
+        LOGGER.exception("Dispatcher could not complete")
         return 1
 
 
