@@ -184,3 +184,16 @@ def claim_probe(job_id: str):
     finally:
         connection.rollback()
         connection.close()
+@celery_app.task(name="docmind.ingestion.extract_probe")
+def extract_probe(job_id: str) -> dict:
+    """
+    Extract an uploaded document through Celery.
+
+    Diagnostic only:
+    - Does not change MySQL job status
+    - Does not generate embeddings
+    - Does not write to Qdrant
+    """
+    from .storage_extraction_probe import inspect_job_document
+
+    return inspect_job_document(job_id)
