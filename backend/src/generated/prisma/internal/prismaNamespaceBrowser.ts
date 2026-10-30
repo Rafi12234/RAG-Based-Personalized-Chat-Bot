@@ -169,7 +169,12 @@ export const IngestionJobScalarFieldEnum = {
   errorMessage: 'errorMessage',
   createdAt: 'createdAt',
   startedAt: 'startedAt',
-  completedAt: 'completedAt'
+  completedAt: 'completedAt',
+  dispatchLeaseUntil: 'dispatchLeaseUntil',
+  dispatchAttempts: 'dispatchAttempts',
+  processingLeaseUntil: 'processingLeaseUntil',
+  processingToken: 'processingToken',
+  nextAttemptAt: 'nextAttemptAt'
 } as const
 
 export type IngestionJobScalarFieldEnum = (typeof IngestionJobScalarFieldEnum)[keyof typeof IngestionJobScalarFieldEnum]
@@ -261,7 +266,8 @@ export type DocumentVersionOrderByRelevanceFieldEnum = (typeof DocumentVersionOr
 export const IngestionJobOrderByRelevanceFieldEnum = {
   id: 'id',
   documentVersionId: 'documentVersionId',
-  errorMessage: 'errorMessage'
+  errorMessage: 'errorMessage',
+  processingToken: 'processingToken'
 } as const
 
 export type IngestionJobOrderByRelevanceFieldEnum = (typeof IngestionJobOrderByRelevanceFieldEnum)[keyof typeof IngestionJobOrderByRelevanceFieldEnum]

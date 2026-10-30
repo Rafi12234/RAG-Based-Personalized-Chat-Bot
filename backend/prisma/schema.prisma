@@ -130,18 +130,42 @@ model DocumentVersion {
   @@index([status])
 }
 
+
 model IngestionJob {
   id                String    @id @default(cuid())
   documentVersionId String
+
   status            JobStatus @default(QUEUED)
   attempts          Int       @default(0)
   errorMessage      String?   @db.Text
+
   createdAt         DateTime  @default(now())
   startedAt         DateTime?
   completedAt       DateTime?
 
-  documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id])
+  // Temporary lease acquired before dispatching to Redis.
+  // Prevents continuously publishing the same queued job.
+  dispatchLeaseUntil DateTime?
+
+  // Total number of dispatch attempts.
+  dispatchAttempts  Int       @default(0)
+
+  // Worker execution lease.
+  // Used to detect interrupted or stalled jobs.
+  processingLeaseUntil DateTime?
+
+  // Unique token identifying the worker's processing attempt.
+  // Prevents stale workers from updating a recovered job.
+  processingToken   String?   @db.VarChar(64)
+
+  // Earliest time at which the job may be retried.
+  nextAttemptAt     DateTime?
+
+ documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id])
 
   @@index([status, createdAt])
   @@index([documentVersionId])
+  @@index([status, nextAttemptAt, dispatchLeaseUntil])
+  @@index([status, processingLeaseUntil])
 }
+

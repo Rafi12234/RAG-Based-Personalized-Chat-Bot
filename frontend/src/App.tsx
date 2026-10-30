@@ -189,7 +189,7 @@ export default function App() {
       const input = document.getElementById("doc-upload") as HTMLInputElement | null;
       if (input) input.value = "";
       await refreshDocuments(baseId);
-      setNotice("File stored securely. AI indexing will be added in Phase 2.");
+      setNotice("Document uploaded. Ingestion job queued for processing.");
     });
   }
   async function download(id: string) {
