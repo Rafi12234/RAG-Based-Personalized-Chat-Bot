@@ -1,0 +1,8 @@
+DocMind-AI QA fixture: Infrastructure
+
+RustFS is the S3-compatible object store that holds uploaded source documents.
+MySQL stores organizations, memberships, document metadata, and ingestion-job records.
+Redis is used by the background task queue for ingestion dispatch.
+Qdrant stores document vectors, not the original PDF or DOCX binary files.
+
+This is a controlled QA document for evaluating document-grounded retrieval.
