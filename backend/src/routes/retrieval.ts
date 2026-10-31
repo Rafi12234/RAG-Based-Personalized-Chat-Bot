@@ -1,6 +1,6 @@
-/** Phase 3.1 read-only, session-authenticated retrieval. No LLM or vector writes.
- * Phase 3.1 security-regression harness can inject in-memory data sources;
- * the exported production router always uses real auth, Prisma and Python.
+/** Phase 3.1-3.4: authenticated retrieval and opt-in grounded answers.
+ * Both endpoints use identical trusted MySQL + ready-vector eligibility checks.
+ * Only the local test harness can inject dependencies; production uses real services.
  */
 import { Router, type Request, type RequestHandler } from "express";
 import { rateLimit } from "express-rate-limit";
@@ -8,13 +8,13 @@ import { prisma } from "../config/prisma.js";
 import { HttpError } from "../lib/http.js";
 import { idSchema } from "../lib/validate.js";
 import { parseRetrievalRequest } from "../lib/retrievalValidation.js";
-import type { RelationalSource, RetrievedPoint, TrustedRetrievalScope } from "../lib/retrievalEligibility.js";
+import type { RelationalSource, RetrievedPoint, TrustedRetrievalScope, VerifiedSource } from "../lib/retrievalEligibility.js";
 import { candidateDocumentIds, selectAuthorizedSources } from "../lib/retrievalPostFilter.js";
 import { currentUserId, requireAuth } from "../middleware/auth.js";
 import { accessibleKnowledgeBase } from "../middleware/organization.js";
 import { fetchInternalPoints } from "../services/retrievalClient.js";
+import { generateGroundedAnswer } from "../services/groundedAnswer.js";
 
-/** The fields needed from a trusted relational (Prisma) document query. */
 export type RetrievalDocumentRecord = {
   id: string;
   title: string;
@@ -24,7 +24,6 @@ export type RetrievalDocumentRecord = {
   versions: Array<{ id: string; status: string }>;
 };
 
-/** Injectable only for offline route tests; never accept dependencies from HTTP. */
 export type RetrievalRouteDependencies = {
   authenticate: RequestHandler;
   identifyUser: (req: Request) => string;
@@ -33,6 +32,8 @@ export type RetrievalRouteDependencies = {
   }>;
   searchPoints: (scope: TrustedRetrievalScope, question: string, topK: number) => Promise<RetrievedPoint[]>;
   loadDocuments: (scope: TrustedRetrievalScope, documentIds: string[]) => Promise<RetrievalDocumentRecord[]>;
+  /** Only in offline tests: production never accepts a browser-supplied provider. */
+  generateFromPrompt?: (prompt: string) => Promise<string>;
 };
 
 const productionDependencies: RetrievalRouteDependencies = {
@@ -56,49 +57,73 @@ const productionDependencies: RetrievalRouteDependencies = {
   },
 };
 
+async function authorizeAgain(deps: RetrievalRouteDependencies, userId: string, kb: {id: string; organizationId: string}) {
+  try {
+    const current = await deps.authorizeKnowledgeBase(userId, kb.id);
+    if (current.kb.id !== kb.id || current.kb.organizationId !== kb.organizationId) {
+      throw new HttpError(404, "Resource not found");
+    }
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) throw new HttpError(404, "Resource not found");
+    throw error;
+  }
+}
+
+/** Shared security-critical path: authorization -> vector search -> MySQL -> authorization. */
+async function verifiedSearch(deps: RetrievalRouteDependencies, req: Request): Promise<{
+  question: string;
+  sources: VerifiedSource[];
+  kb: { id: string; organizationId: string };
+  userId: string;
+}> {
+  const parsedId = idSchema.safeParse(String(req.params.knowledgeBaseId ?? ""));
+  if (!parsedId.success) throw new HttpError(404, "Resource not found");
+  const userId = deps.identifyUser(req);
+  let kb: { id: string; organizationId: string };
+  try { ({ kb } = await deps.authorizeKnowledgeBase(userId, parsedId.data)); }
+  catch (error) {
+    if (error instanceof HttpError && error.status === 404) throw new HttpError(404, "Resource not found");
+    throw error;
+  }
+  const input = parseRetrievalRequest(req.body);
+  const scope: TrustedRetrievalScope = { organizationId: kb.organizationId, knowledgeBaseId: kb.id };
+  const hits = await deps.searchPoints(scope, input.question, input.topK);
+  if (!Array.isArray(hits) || hits.length > 40) throw new HttpError(503, "Retrieval service unavailable");
+  const documents = await deps.loadDocuments(scope, candidateDocumentIds(hits));
+  const trusted = new Map<string, RelationalSource>();
+  for (const d of documents) {
+    const latest = d.versions[0];
+    if (!latest) continue;
+    trusted.set(d.id, {
+      documentId: d.id, documentVersionId: latest.id, latestVersionId: latest.id,
+      versionStatus: latest.status, organizationId: d.knowledgeBase.organizationId,
+      knowledgeBaseId: d.knowledgeBaseId, deletedAt: d.deletedAt, documentTitle: d.title,
+    });
+  }
+  const sources = selectAuthorizedSources(scope, hits, trusted, input.topK);
+  await authorizeAgain(deps, userId, kb);
+  return { question: input.question, sources, kb, userId };
+}
+
 export function createRetrievalRouter(deps: RetrievalRouteDependencies = productionDependencies) {
   const router = Router();
   router.use(deps.authenticate);
-  const limiter = rateLimit({ windowMs: 60_000, limit: 12, standardHeaders: "draft-8", legacyHeaders: false });
+  const retrievalLimiter = rateLimit({ windowMs: 60_000, limit: 12, standardHeaders: "draft-8", legacyHeaders: false });
+  const answerLimiter = rateLimit({ windowMs: 60_000, limit: 4, standardHeaders: "draft-8", legacyHeaders: false });
 
-  router.post("/:knowledgeBaseId/retrieve", limiter, async (req, res) => {
+  router.post("/:knowledgeBaseId/retrieve", retrievalLimiter, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    const parsedId = idSchema.safeParse(String(req.params.knowledgeBaseId ?? ""));
-    if (!parsedId.success) throw new HttpError(404, "Resource not found");
-    const userId = deps.identifyUser(req);
-    // Authorize BEFORE forwarding a question to the embedding model or Qdrant.
-    let kb: { id: string; organizationId: string };
-    try { ({ kb } = await deps.authorizeKnowledgeBase(userId, parsedId.data)); }
-    catch (error) {
-      if (error instanceof HttpError && error.status === 404) throw new HttpError(404, "Resource not found");
-      throw error;
-    }
-    const input = parseRetrievalRequest(req.body);
-    const scope: TrustedRetrievalScope = { organizationId: kb.organizationId, knowledgeBaseId: kb.id };
-    const hits = await deps.searchPoints(scope, input.question, input.topK);
-    if (hits.length > 40) throw new HttpError(503, "Retrieval service unavailable");
-    const ids = candidateDocumentIds(hits);
-    const documents = await deps.loadDocuments(scope, ids);
-    const trusted = new Map<string, RelationalSource>();
-    for (const d of documents) {
-      const v = d.versions[0];
-      if (!v) continue;
-      trusted.set(d.id, {
-        documentId: d.id, documentVersionId: v.id, latestVersionId: v.id,
-        versionStatus: v.status, organizationId: d.knowledgeBase.organizationId,
-        knowledgeBaseId: d.knowledgeBaseId, deletedAt: d.deletedAt, documentTitle: d.title,
-      });
-    }
-    const sources = selectAuthorizedSources(scope, hits, trusted, input.topK);
-    // Recheck membership after potentially slow embedding/Qdrant/Prisma operations.
-    try {
-      const current = await deps.authorizeKnowledgeBase(userId, kb.id);
-      if (current.kb.organizationId !== scope.organizationId) throw new HttpError(404, "Resource not found");
-    } catch (error) {
-      if (error instanceof HttpError && error.status === 404) throw new HttpError(404, "Resource not found");
-      throw error;
-    }
+    const { sources } = await verifiedSearch(deps, req);
     res.json({ success: true, status: sources.length ? "retrieved" : "no_relevant_sources", sources });
+  });
+
+  router.post("/:knowledgeBaseId/answer", answerLimiter, async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    const { question, sources, kb, userId } = await verifiedSearch(deps, req);
+    const generated = await generateGroundedAnswer(question, sources, deps.generateFromPrompt);
+    // Local generation can be slow; membership may have changed during inference.
+    await authorizeAgain(deps, userId, kb);
+    res.json({ success: true, ...generated });
   });
   return router;
 }
