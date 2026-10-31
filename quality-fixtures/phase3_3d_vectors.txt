@@ -1,0 +1,8 @@
+DocMind-AI QA fixture: Vector search
+
+DocMind-AI stores document embeddings in Qdrant, a vector database.
+The configured collection is docmind_documents_e5_384_v1.
+The embedding model is intfloat/multilingual-e5-small, producing 384-dimensional vectors.
+Similarity uses cosine distance. Search only considers ready vector points scoped to the authorized organization and knowledge base.
+
+This QA fixture is deliberately fictional test content for system verification. It is not a security policy or production deployment guide.
