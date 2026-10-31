@@ -1,0 +1,15 @@
+{
+  "dataset_kind": "synthetic_smoke",
+  "cases": [
+    {"case_id":"en-vector","language":"english","expected_document_ids":["doc-vectors"],"results":[{"document_id":"doc-vectors","score":0.90},{"document_id":"doc-auth","score":0.61}]},
+    {"case_id":"en-auth","language":"english","expected_document_ids":["doc-auth"],"results":[{"document_id":"doc-vectors","score":0.88},{"document_id":"doc-auth","score":0.70}]},
+    {"case_id":"en-storage","language":"english","expected_document_ids":["doc-storage"],"results":[{"document_id":"doc-storage","score":0.91}]},
+    {"case_id":"bn-vector","language":"bangla","expected_document_ids":["doc-vectors"],"results":[{"document_id":"doc-vectors","score":0.87},{"document_id":"doc-storage","score":0.64}]},
+    {"case_id":"bn-auth","language":"bangla","expected_document_ids":["doc-auth"],"results":[{"document_id":"doc-storage","score":0.84},{"document_id":"doc-auth","score":0.76}]},
+    {"case_id":"bn-storage","language":"bangla","expected_document_ids":["doc-storage"],"results":[{"document_id":"doc-storage","score":0.83}]},
+    {"case_id":"mix-vector","language":"mixed","expected_document_ids":["doc-vectors"],"results":[{"document_id":"doc-auth","score":0.92},{"document_id":"doc-vectors","score":0.81}]},
+    {"case_id":"mix-auth","language":"mixed","expected_document_ids":["doc-auth"],"results":[{"document_id":"doc-auth","score":0.86}]},
+    {"case_id":"mix-storage","language":"mixed","expected_document_ids":["doc-storage"],"results":[{"document_id":"doc-storage","score":0.87}]},
+    {"case_id":"not-answerable","language":"english","expected_document_ids":[],"results":[]}
+  ]
+}
