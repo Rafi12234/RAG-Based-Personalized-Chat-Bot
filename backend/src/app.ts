@@ -7,6 +7,7 @@ import { authRouter } from "./routes/auth.js";
 import { organizationsRouter } from "./routes/organizations.js";
 import { knowledgeBasesRouter } from "./routes/knowledgeBases.js";
 import { documentsRouter, knowledgeBaseDocumentsRouter } from "./routes/documents.js";
+import { retrievalRouter } from "./routes/retrieval.js";
 import { notFound, errorHandler, HttpError } from "./lib/http.js";
 
 const app = express();
@@ -42,6 +43,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/organizations", organizationsRouter);
 app.use("/api/v1/knowledge-bases", knowledgeBasesRouter);
 app.use("/api/v1/knowledge-bases", knowledgeBaseDocumentsRouter);
+app.use("/api/v1/knowledge-bases", retrievalRouter);
 app.use("/api/v1/documents", documentsRouter);
 app.use(notFound);
 app.use(errorHandler);
