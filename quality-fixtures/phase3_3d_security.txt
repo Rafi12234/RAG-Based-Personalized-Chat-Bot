@@ -1,0 +1,8 @@
+DocMind-AI QA fixture: Access control
+
+DocMind-AI checks the user's authenticated session and organization membership before retrieving document chunks.
+Cross-organization access to an inaccessible knowledge base must return a 404 error without disclosing document text.
+An internal retrieval service request uses a signed HMAC request with a timestamp and nonce.
+The backend verifies that returned document versions are READY and belong to the authorized knowledge base before returning them.
+
+This QA fixture is controlled sample text, not a substitute for a production security audit.
