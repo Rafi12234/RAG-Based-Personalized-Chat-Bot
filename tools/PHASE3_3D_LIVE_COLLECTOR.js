@@ -9,7 +9,7 @@
  * 6) From python-worker: python -m worker.phase3_retrieval_quality --input ..\quality-fixtures\phase3_3d_live_local.json
  */
 void (async () => {
-  const QA_KB_ID = "REPLACE_WITH_NEW_QA_KB_ID";
+  const QA_KB_ID = "cmvxmqrea0000c8l1pcvmh7oa";
   if (!/^c[a-z0-9]{10,}$/i.test(QA_KB_ID)) {
     console.error("Set QA_KB_ID to your newly created QA Knowledge Base ID first.");
     return;
