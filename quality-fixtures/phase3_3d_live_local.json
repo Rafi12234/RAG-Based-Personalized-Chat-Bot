@@ -1,0 +1,188 @@
+{
+  "dataset_kind": "real_labeled",
+  "cases": [
+    {
+      "case_id": "en-vectors",
+      "language": "english",
+      "expected_document_ids": [
+        "cmvxmv8hf0001c8l1x5nnmdva"
+      ],
+      "results": [
+        {
+          "document_id": "cmvxmv8hf0001c8l1x5nnmdva",
+          "score": 0.9236853
+        },
+        {
+          "document_id": "cmvxmvf5o0004c8l19lgl0syi",
+          "score": 0.83654666
+        },
+        {
+          "document_id": "cmvxmvkhs0007c8l138x970qp",
+          "score": 0.82942915
+        }
+      ]
+    },
+    {
+      "case_id": "en-security",
+      "language": "english",
+      "expected_document_ids": [
+        "cmvxmvkhs0007c8l138x970qp"
+      ],
+      "results": [
+        {
+          "document_id": "cmvxmvkhs0007c8l138x970qp",
+          "score": 0.82505476
+        },
+        {
+          "document_id": "cmvxmvf5o0004c8l19lgl0syi",
+          "score": 0.79403496
+        },
+        {
+          "document_id": "cmvxmv8hf0001c8l1x5nnmdva",
+          "score": 0.7708197
+        }
+      ]
+    },
+    {
+      "case_id": "bn-vectors",
+      "language": "bangla",
+      "expected_document_ids": [
+        "cmvxmv8hf0001c8l1x5nnmdva"
+      ],
+      "results": [
+        {
+          "document_id": "cmvxmv8hf0001c8l1x5nnmdva",
+          "score": 0.8219921
+        },
+        {
+          "document_id": "cmvxmvf5o0004c8l19lgl0syi",
+          "score": 0.77944213
+        },
+        {
+          "document_id": "cmvxmvkhs0007c8l138x970qp",
+          "score": 0.75124896
+        }
+      ]
+    },
+    {
+      "case_id": "bn-storage",
+      "language": "bangla",
+      "expected_document_ids": [
+        "cmvxmvf5o0004c8l19lgl0syi"
+      ],
+      "results": [
+        {
+          "document_id": "cmvxmvf5o0004c8l19lgl0syi",
+          "score": 0.79266787
+        },
+        {
+          "document_id": "cmvxmv8hf0001c8l1x5nnmdva",
+          "score": 0.7741275
+        },
+        {
+          "document_id": "cmvxmvkhs0007c8l138x970qp",
+          "score": 0.749938
+        }
+      ]
+    },
+    {
+      "case_id": "mixed-security",
+      "language": "mixed",
+      "expected_document_ids": [
+        "cmvxmvkhs0007c8l138x970qp"
+      ],
+      "results": [
+        {
+          "document_id": "cmvxmvkhs0007c8l138x970qp",
+          "score": 0.8169213
+        },
+        {
+          "document_id": "cmvxmvf5o0004c8l19lgl0syi",
+          "score": 0.792149
+        },
+        {
+          "document_id": "cmvxmv8hf0001c8l1x5nnmdva",
+          "score": 0.77719927
+        }
+      ]
+    },
+    {
+      "case_id": "mixed-storage",
+      "language": "mixed",
+      "expected_document_ids": [
+        "cmvxmvf5o0004c8l19lgl0syi"
+      ],
+      "results": [
+        {
+          "document_id": "cmvxmv8hf0001c8l1x5nnmdva",
+          "score": 0.8715012
+        },
+        {
+          "document_id": "cmvxmvf5o0004c8l19lgl0syi",
+          "score": 0.85740787
+        },
+        {
+          "document_id": "cmvxmvkhs0007c8l138x970qp",
+          "score": 0.84574306
+        }
+      ]
+    },
+    {
+      "case_id": "en-negative",
+      "language": "english",
+      "expected_document_ids": [],
+      "results": [
+        {
+          "document_id": "cmvxmvf5o0004c8l19lgl0syi",
+          "score": 0.75392
+        },
+        {
+          "document_id": "cmvxmv8hf0001c8l1x5nnmdva",
+          "score": 0.7408853
+        },
+        {
+          "document_id": "cmvxmvkhs0007c8l138x970qp",
+          "score": 0.73198926
+        }
+      ]
+    },
+    {
+      "case_id": "bn-negative",
+      "language": "bangla",
+      "expected_document_ids": [],
+      "results": [
+        {
+          "document_id": "cmvxmv8hf0001c8l1x5nnmdva",
+          "score": 0.68754625
+        },
+        {
+          "document_id": "cmvxmvf5o0004c8l19lgl0syi",
+          "score": 0.6817899
+        },
+        {
+          "document_id": "cmvxmvkhs0007c8l138x970qp",
+          "score": 0.6730523
+        }
+      ]
+    },
+    {
+      "case_id": "mixed-negative",
+      "language": "mixed",
+      "expected_document_ids": [],
+      "results": [
+        {
+          "document_id": "cmvxmv8hf0001c8l1x5nnmdva",
+          "score": 0.83879393
+        },
+        {
+          "document_id": "cmvxmvkhs0007c8l138x970qp",
+          "score": 0.8188464
+        },
+        {
+          "document_id": "cmvxmvf5o0004c8l19lgl0syi",
+          "score": 0.80125856
+        }
+      ]
+    }
+  ]
+}
