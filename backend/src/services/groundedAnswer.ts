@@ -112,6 +112,55 @@ function extractHttpStatusAnswer(question: string, sources: readonly VerifiedSou
   };
 }
 
+/** A deliberately narrow fallback for short named infrastructure facts.
+ * It is NOT a general semantic verifier. Only accept explicit questions about
+ * which vector database stores embeddings or which object store holds uploaded
+ * source documents, and derive names from a verified source sentence.
+ * Names are not hardcoded and conflicting names fail closed.
+ */
+function requestedInfrastructureKind(question: string): "vector_database" | "object_store" | null {
+  const asksName = /\b(?:which|what)\b|কোন/iu.test(question);
+  if (!asksName) return null;
+  const vector = /\bvector\s+database\b|ভেক্টর\s*ডাটাবেস/u.test(question) &&
+    /\bembeddings?\b|এমবেডিং|এম্বেডিং/iu.test(question);
+  const store = /\bobject\s+store\b|\bstorage\b|স্টোরেজ/u.test(question) &&
+    /\b(?:upload(?:ed)?|original|source|document(?:s)?|file(?:s)?)\b|আপলোড|মূল|ফাইল/u.test(question);
+  if (vector === store) return null;
+  return vector ? "vector_database" : "object_store";
+}
+
+function extractNamedInfrastructureAnswer(
+  question: string, sources: readonly VerifiedSource[],
+): GroundedAnswer | null {
+  const kind = requestedInfrastructureKind(question);
+  if (!kind) return null;
+  const candidates: Array<{ name: string; index: number }> = [];
+  for (const [index, source] of sources.entries()) {
+    for (const { quote } of evidenceChoices(source, index)) {
+      let match: RegExpExecArray | null = null;
+      if (kind === "vector_database" && /\bembeddings?\b/iu.test(quote)) {
+        match = /\b(?:in|by|at)\s+([A-Za-z][A-Za-z0-9_-]{1,40})\s*,\s*(?:an?|the)\s+vector\s+database\b/iu.exec(quote);
+        if (!match) {
+          match = /^([A-Za-z][A-Za-z0-9_-]{1,40})\s+(?:is|was)\s+(?:an?\s+|the\s+)?(?:[A-Za-z0-9-]+\s+){0,4}vector\s+database\b/iu.exec(quote);
+        }
+      }
+      if (kind === "object_store" && /\buploaded\b|\bsource\s+documents?\b/iu.test(quote)) {
+        match = /^([A-Za-z][A-Za-z0-9_-]{1,40})\s+(?:is|was)\s+(?:an?\s+|the\s+)?(?:[A-Za-z0-9-]+\s+){0,4}object\s+store\b/iu.exec(quote);
+      }
+      if (match) candidates.push({ name: match[1], index });
+    }
+  }
+  if (!candidates.length || new Set(candidates.map(candidate => candidate.name.toLowerCase())).size !== 1) {
+    return null;
+  }
+  const first = candidates[0];
+  return {
+    status: "answered",
+    answer: first.name + " [S" + (first.index + 1) + "].",
+    citations: [citationFor(sources[first.index], first.index)],
+  };
+}
+
 /** For model-authored structured answers, at least one meaningful answer token
  * must be literally present in the claimed quote. This prevents an arbitrary
  * answer from borrowing a genuine but unrelated evidence ID. It does NOT prove entailment.
@@ -398,6 +447,12 @@ export async function generateGroundedAnswer(
   }
   if (!answerRelevantToQuestion(question, retry, selected)) {
     return reportAnswerFailure("answer_not_relevant_to_question");
+  }
+  if (retry.status === "insufficient_evidence") {
+    // After two abstentions, try only a narrow, source-text-derived name.
+    // Unrecognized or conflicting facts stay abstentions without citations.
+    const fact = extractNamedInfrastructureAnswer(question, selected);
+    if (fact) return fact;
   }
   return retry;
 }
