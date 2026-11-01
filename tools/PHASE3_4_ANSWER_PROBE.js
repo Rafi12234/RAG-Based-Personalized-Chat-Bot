@@ -4,7 +4,7 @@
  * Do not paste raw private answer/source text into a public chat.
  */
 void (async()=>{
-  const KB_ID="REPLACE_WITH_NEW_QA_KB_ID";
+  const KB_ID="cmvxmqrea0000c8l1pcvmh7oa";
   if(!/^c[a-z0-9]{10,}$/i.test(KB_ID)){console.error("Set your QA KB ID first");return;}
   const questions=[
     {language:"English",question:"Where are document vectors stored?"},
