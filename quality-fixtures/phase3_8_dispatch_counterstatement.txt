@@ -1,0 +1,10 @@
+Harborlight Transit — Dispatch Cutoff Counterstatement
+SYNTHETIC PHASE 3.8 TEST DATA — INTENTIONAL CONFLICT
+
+This independent fictional operations note asserts: the Route North same-day dispatch cutoff is 15:00 Asia/Dhaka on business days. Packages scanned later are queued to the next business day.
+
+This statement deliberately conflicts with the separate Harborlight Transit Dispatch Operations Policy, which says Route North uses 16:00 Asia/Dhaka. Neither document states that it supersedes the other; neither provides an authoritative effective-date rule. If both documents are in scope and returned as evidence, the Route North cutoff is unresolved and the system should not present either number as certain.
+
+There is no disagreement about Route East in this counterstatement because this note does not set an East cutoff. This note must not be used to turn a question about Route East into a question about Route North.
+
+This file is entirely fictional and contains no real operational data.
