@@ -11,6 +11,9 @@ const adapter = new PrismaMariaDb({
   password: env.DATABASE_PASSWORD,
   database: env.DATABASE_NAME,
   connectionLimit: 5,
+  // Prisma 7 MariaDB driver defaults to only 1s for TCP connection setup.
+  // Use the documented 5s behavior without increasing pool concurrency.
+  connectTimeout: 5_000,
 });
 
 export const prisma = new PrismaClient({
