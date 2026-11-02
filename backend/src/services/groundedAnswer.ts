@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import { HttpError } from "../lib/http.js";
+import { evidenceSupportsAnswerTerms } from "../lib/evidenceConsistency.js";
 import type { VerifiedSource } from "../lib/retrievalEligibility.js";
 
 const MAX_SOURCES = 5;
@@ -344,6 +345,9 @@ function validateAttributedAnswer(
   }
   if (!answerAnchoredInQuote(sentence, quote)) {
     return reportAnswerFailure("answer_not_supported_by_quote");
+  }
+  if (!evidenceSupportsAnswerTerms(sentence, quote)) {
+    return reportAnswerFailure("answer_claim_mismatch");
   }
   if (Array.from(sentence).length + data.source_id.length + 5 > MAX_ANSWER_CHARS) {
     return reportAnswerFailure("answer_too_long");
