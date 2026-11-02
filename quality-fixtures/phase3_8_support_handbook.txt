@@ -1,0 +1,17 @@
+Cedarstone Helpdesk — Support Operations Handbook
+SYNTHETIC PHASE 3.8 TEST DATA — NOT REAL CUSTOMER SUPPORT INFORMATION
+
+Section A. Ticket handling
+Cedarstone Helpdesk receives written support requests through its internal ticket portal. The handbook does not publish a public support phone number or a direct support email address. If a question asks for a phone number or email address, those contact details cannot be derived from this handbook.
+
+Section B. Requests and deadlines
+The support team aims to acknowledge a new ticket within one business day. A customer may request an invoice correction within seven business days of receiving the invoice. The invoice correction deadline is not a deadline for closing all support tickets. A ticket reopened after a response is counted as the same ticket, not a brand-new case.
+
+Section C. Data and access rules
+Only authorized helpdesk staff may inspect ticket attachments. The policy specifies that resolved ticket attachments are removed after 30 days; metadata about the ticket is retained for 90 days. These are separate retention periods for different information. The handbook does not specify encryption keys, database root credentials, or the phone number of the administrator.
+
+Section D. Escalation
+If an invoice request is disputed, the ticket is escalated to the billing review queue. The ticket reference must be included in the escalation. No customer should be promised an automatic refund, and no emergency hotline is documented here. The fictional portal has no public URL in this test dataset.
+
+Section E. Evaluation notes
+This document is intended to test whether a cited answer preserves the correct object, deadline, and access scope. It contains no real user names, telephone numbers, emails, addresses, or passwords. Keep it separate from the original Phase 2 pilot data.
