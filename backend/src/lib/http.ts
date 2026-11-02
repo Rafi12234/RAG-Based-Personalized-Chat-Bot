@@ -32,6 +32,22 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, _ne
     res.status(409).json({ success: false, message: "A record with those details already exists" });
     return;
   }
+  // A transient adapter connection failure is an unavailable dependency, not
+  // an unexpected application bug. Never expose driver messages to callers.
+  // Only match this documented Prisma driver-adapter error shape.
+  if (error && typeof error === "object" && "code" in error &&
+      error.code === "P2039" && "meta" in error &&
+      error.meta && typeof error.meta === "object" &&
+      "driverAdapterError" in error.meta) {
+    const driver = error.meta.driverAdapterError;
+    if (driver && typeof driver === "object" && "message" in driver &&
+        typeof driver.message === "string" &&
+        driver.message.includes("pool failed to retrieve a connection from pool")) {
+      console.error("DocMind database diagnostic: connection_pool_unavailable");
+      res.status(503).json({ success: false, message: "Database temporarily unavailable" });
+      return;
+    }
+  }
   console.error("Unhandled API error:", error);
   res.status(500).json({ success: false, message: "Unexpected server error" });
 };
