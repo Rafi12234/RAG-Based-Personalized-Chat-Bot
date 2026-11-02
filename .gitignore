@@ -10,3 +10,7 @@ __pycache__/
 coverage/
 .DS_Store
 backend/src/generated/prisma/
+
+# Private local QA results can contain real document IDs. Never commit these.
+quality-fixtures/phase3_3d_live_local.json
+quality-fixtures/phase3_3d_live_local.*.json
