@@ -161,6 +161,43 @@ function extractNamedInfrastructureAnswer(
   };
 }
 
+/** Conservative numeric extraction from a verified sentence after model abstention.
+ * Only accepts direct questions about embedding/vector dimensionality. The
+ * dimension value comes from source text, never from a fixed application constant.
+ * Conflicting counts across authorized sources cause abstention. This is not a
+ * general semantic-entailment checker.
+ */
+function extractEmbeddingDimensionAnswer(
+  question: string, sources: readonly VerifiedSource[],
+): GroundedAnswer | null {
+  const asksDimensions =
+    /\bhow many\s+dimensions?\b|\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:number\s+of\s+)?(?:dimensions?|dimensionality)\b|\b(?:embedding|vector)(?:\s+\w+){0,3}\s+dimensionality\b|(?:ডাইমেনশন|মাত্রা).{0,30}(?:কত|কয়|কয়)/iu.test(question);
+  const mentionsEmbedding =
+    /\b(?:embedding|embeddings|vector|vectors)\b|এমবেডিং|এম্বেডিং|ভেক্টর/iu.test(question);
+  if (!asksDimensions || !mentionsEmbedding) return null;
+
+  const candidates: Array<{ count: number; index: number }> = [];
+  for (const [index, source] of sources.entries()) {
+    for (const { quote } of evidenceChoices(source, index)) {
+      // A number in a collection name or a neighboring unrelated sentence
+      // does not count as an embedding dimension.
+      if (!/\b(?:embedding model|embeddings?)\b/iu.test(quote)) continue;
+      const values = [
+        ...[...quote.matchAll(/\b([1-9]\d{0,4})\s*[- ]\s*dimensional\s+(?:vectors?|embeddings?)\b/giu)].map(m => Number(m[1])),
+        ...[...quote.matchAll(/\b([1-9]\d{0,4})\s+dimensions?\b/giu)].map(m => Number(m[1])),
+      ].filter(number => Number.isInteger(number) && number >= 1 && number <= 65536);
+      for (const count of new Set(values)) candidates.push({ count, index });
+    }
+  }
+  if (!candidates.length || new Set(candidates.map(item => item.count)).size !== 1) return null;
+  const found = candidates[0];
+  return {
+    status: "answered",
+    answer: found.count + " dimensions [S" + (found.index + 1) + "].",
+    citations: [citationFor(sources[found.index], found.index)],
+  };
+}
+
 /** For model-authored structured answers, at least one meaningful answer token
  * must be literally present in the claimed quote. This prevents an arbitrary
  * answer from borrowing a genuine but unrelated evidence ID. It does NOT prove entailment.
@@ -451,7 +488,8 @@ export async function generateGroundedAnswer(
   if (retry.status === "insufficient_evidence") {
     // After two abstentions, try only a narrow, source-text-derived name.
     // Unrecognized or conflicting facts stay abstentions without citations.
-    const fact = extractNamedInfrastructureAnswer(question, selected);
+    const fact = extractNamedInfrastructureAnswer(question, selected)
+      ?? extractEmbeddingDimensionAnswer(question, selected);
     if (fact) return fact;
   }
   return retry;
