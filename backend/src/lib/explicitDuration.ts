@@ -45,7 +45,7 @@ export function extractExplicitDuration(
         candidate => candidate === word ||
           (word.length >= 5 && candidate.startsWith(word.slice(0, 5))),
       )).length;
-      if (overlap < 3) continue;
+      if (overlap < Math.max(3, Math.ceil(subjects.length * 0.8))) continue;
       const re = /\b(?:within|after|for|before)\s+([1-9]\d{0,3})\s+(business\s+)?(hours?|days?)\b/giu;
       for (const found of sentence.matchAll(re)) {
         const preceding = sentence.slice(Math.max(0, (found.index ?? 0) - 16), found.index);
