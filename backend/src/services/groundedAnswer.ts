@@ -296,7 +296,6 @@ export function buildEvidencePrompt(question: string, sources: readonly Verified
     source: `S${index + 1}`,
     title: source.documentTitle.slice(0, 200),
     page: source.pageNumber,
-    excerpt: source.excerpt.slice(0, 800),
     evidence_choices: evidenceChoices(source, index),
   }));
   // Evidence quotations may contain prompt injection. They are data, not instructions.
@@ -441,6 +440,11 @@ export function validateModelAnswer(raw: string, sources: readonly VerifiedSourc
 }
 
 /** Make an explicit opt-in, loopback-only request. No cloud fallback or auto-download. */
+/** Short, allowlisted transport codes; no prompts, source excerpts or raw errors. */
+class LocalModelFailure extends Error {
+  constructor(readonly reason: string) { super(reason); }
+}
+
 export async function callLocalOllama(prompt: string): Promise<string> {
   const model = process.env.DOCMIND_OLLAMA_MODEL ?? "";
   const urlText = process.env.DOCMIND_OLLAMA_URL ?? "http://127.0.0.1:11434/api/generate";
@@ -458,30 +462,46 @@ export async function callLocalOllama(prompt: string): Promise<string> {
       url.search || url.hash) {
     return reportAnswerFailure("disallowed_ollama_url");
   }
+
+  // The response is a short structured factual answer. Avoid an oversized
+  // generation while giving the small local model enough context for up to
+  // five verified excerpts. Keep the model loaded across sequential requests.
   const payload = JSON.stringify({
     model, prompt, stream: false, format: OLLAMA_ANSWER_FORMAT,
-    options: { temperature: 0, num_predict: 384 },
+    keep_alive: "10m",
+    options: { temperature: 0, num_ctx: 4096, num_predict: 256 },
   });
   try {
     const response = await fetch(url, {
       method: "POST", headers: { "content-type": "application/json" }, body: payload,
-      signal: AbortSignal.timeout(60_000), redirect: "error",
+      signal: AbortSignal.timeout(90_000), redirect: "error",
     });
-    if (!response.ok || !response.body) throw new Error("Unsuccessful model response");
+    if (!response.ok) {
+      throw new LocalModelFailure(response.status >= 500 ? "ollama_http_5xx" : "ollama_http_4xx");
+    }
+    if (!response.body) throw new LocalModelFailure("ollama_empty_body");
     const chunks: Uint8Array[] = [];
     let size = 0;
     for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
       size += chunk.length;
-      if (size > 64 * 1024) throw new Error("Model response too large");
+      if (size > 64 * 1024) throw new LocalModelFailure("ollama_response_oversize");
       chunks.push(chunk);
     }
+    let envelope: unknown;
+    try { envelope = JSON.parse(Buffer.concat(chunks).toString("utf8")); }
+    catch { throw new LocalModelFailure("ollama_invalid_json"); }
     const result = z.object({ response: z.string().max(16_000), done: z.literal(true) })
-      .safeParse(JSON.parse(Buffer.concat(chunks).toString("utf8")));
-    if (!result.success) throw new Error("Invalid model response");
+      .safeParse(envelope);
+    if (!result.success) throw new LocalModelFailure("ollama_invalid_envelope");
     return result.data.response;
-  } catch {
-    // Never expose prompts, private excerpts, local model paths or raw exceptions.
-    return reportAnswerFailure("ollama_transport_or_envelope");
+  } catch (error) {
+    if (error instanceof LocalModelFailure) return reportAnswerFailure(error.reason);
+    if (error && typeof error === "object" && "name" in error &&
+        (error.name === "TimeoutError" || error.name === "AbortError")) {
+      return reportAnswerFailure("ollama_timeout");
+    }
+    // No model output, private document excerpt or raw transport detail is logged.
+    return reportAnswerFailure("ollama_network_error");
   }
 }
 
