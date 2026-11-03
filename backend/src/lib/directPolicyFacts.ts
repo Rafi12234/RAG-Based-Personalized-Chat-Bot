@@ -40,7 +40,7 @@ function kindFor(question: string): Kind | undefined {
 const AMOUNT = "([1-9][0-9]{0,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)";
 const patterns = {
   refund: new RegExp("\\brefund\\s+is\\s+processed\\s+within\\s+" + AMOUNT +
-    "\\s+business\\s+days?\\s+after\\s+(the\\s+refund\\s+request\\s+is\\s+approved)\\b", "giu"),
+    "\\s+business\\s+days?\\s+after\\s+(the\\s+refund\\s+request\\s+is\\s+(?:approved|submitted|received|rejected))\\b", "giu"),
   ack: new RegExp("\\backnowledge\\s+a\\s+new\\s+ticket\\s+within\\s+" +
     AMOUNT + "\\s+business\\s+days?\\b", "giu"),
   attachments: new RegExp("\\bresolved\\s+ticket\\s+attachments\\s+are\\s+removed\\s+after\\s+" +
