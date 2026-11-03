@@ -81,10 +81,8 @@ test("a conflicting refund approval trigger must abstain", () => {
   const other = source(
     "A refund is processed within five business days after the refund request is submitted.", 4, "other.txt"
   );
-  // This narrower matcher won't claim the other trigger as the supported rule.
-  // Future broader trigger parsers must explicitly detect conflicts.
   assert.equal(extractDirectPolicyFact(
-    "When does the five-business-day refund processing period start?", [other]
+    "When does the five-business-day refund processing period start?", [policy, other]
   ), null);
 });
 
