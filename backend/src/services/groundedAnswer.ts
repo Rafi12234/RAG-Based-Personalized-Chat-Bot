@@ -491,7 +491,8 @@ export async function generateGroundedAnswer(
 ): Promise<GroundedAnswer> {
   if (!sources.length) return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
   const selected = sources.slice(0, MAX_SOURCES);
-  const extracted = extractHttpStatusAnswer(question, selected);
+  const extracted = extractHttpStatusAnswer(question, selected)
+    ?? extractRouteDispatchCutoffAnswer(question, selected);
   if (extracted) return extracted;
   const prompt = buildEvidencePrompt(question, selected);
   const raw = await provider(prompt);
