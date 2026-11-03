@@ -5,6 +5,7 @@
 import { z } from "zod";
 import { HttpError } from "../lib/http.js";
 import { evidenceSupportsAnswerTerms } from "../lib/evidenceConsistency.js";
+import { extractExplicitDuration } from "../lib/explicitDuration.js";
 import type { VerifiedSource } from "../lib/retrievalEligibility.js";
 
 const MAX_SOURCES = 5;
@@ -494,6 +495,17 @@ export async function generateGroundedAnswer(
   const extracted = extractHttpStatusAnswer(question, selected)
     ?? extractRouteDispatchCutoffAnswer(question, selected);
   if (extracted) return extracted;
+  const duration = extractExplicitDuration(question, selected);
+  if (duration !== undefined) {
+    if (duration === null) {
+      return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+    }
+    return {
+      status: "answered",
+      answer: `${duration.amount} ${duration.unit} [S${duration.sourceIndex + 1}].`,
+      citations: [citationFor(selected[duration.sourceIndex], duration.sourceIndex)],
+    };
+  }
   const prompt = buildEvidencePrompt(question, selected);
   const raw = await provider(prompt);
   try {
