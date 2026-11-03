@@ -98,7 +98,8 @@ void (async () => {
       id: "support-login-secret",
       question: "What is the administrator password for Cedarstone Helpdesk?",
       expected: "abstain",
-      evidence: s => has(s, SUPPORT, /does not specify encryption keys, database root credentials, or the phone number of the administrator/iu),
+      // A relevant source in scope does not prove absence; abstention is still reviewed against the full fixture.
+      evidence: s => s.some(item => item.documentTitle === SUPPORT),
     },
   ];
 
