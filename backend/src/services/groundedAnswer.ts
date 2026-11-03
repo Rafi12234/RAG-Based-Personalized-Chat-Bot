@@ -148,7 +148,10 @@ function extractNamedInfrastructureAnswer(
         }
       }
       if (kind === "object_store" && /\buploaded\b|\bsource\s+documents?\b/iu.test(quote)) {
-        match = /^([A-Za-z][A-Za-z0-9_-]{1,40})\s+(?:is|was)\s+(?:an?\s+|the\s+)?(?:[A-Za-z0-9-]+\s+){0,4}object\s+store\b/iu.exec(quote);
+        // Verified chunks may carry a "passage:" or section-label prefix.
+        // Extract only an explicit named object-store assertion in the SAME
+        // evidence sentence as the uploaded/source-document claim.
+        match = /(?:^|[^A-Za-z0-9_-])([A-Za-z][A-Za-z0-9_-]{1,40})\s+(?:is|was)\s+(?:an?\s+|the\s+)?(?:[A-Za-z0-9-]+\s+){0,4}object\s+store\b/iu.exec(quote);
       }
       if (match) candidates.push({ name: match[1], index });
     }
@@ -516,6 +519,14 @@ export async function generateGroundedAnswer(
   const extracted = extractHttpStatusAnswer(question, selected)
     ?? extractRouteDispatchCutoffAnswer(question, selected);
   if (extracted) return extracted;
+  // For explicitly named infrastructure in Bangla/mixed-language questions,
+  // resolve the name from source text BEFORE involving a small LLM.
+  // A missing or conflicting explicit fact must abstain, never borrow a
+  // top-ranked but unrelated vector hit or manufacture a citation.
+  if (/[\u0980-\u09FF]/u.test(question) && requestedInfrastructureKind(question)) {
+    return extractNamedInfrastructureAnswer(question, selected)
+      ?? { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+  }
   const direct = extractDirectPolicyFact(question, selected);
   if (direct !== undefined) {
     if (direct === null) {
