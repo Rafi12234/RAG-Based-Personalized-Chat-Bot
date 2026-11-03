@@ -223,9 +223,9 @@ function extractRouteDispatchCutoffAnswer(
     }
   }
 
-  if (!candidates.length) return null;
-  if (new Set(candidates.map(c => c.time + " " + c.zone.toLowerCase())).size !== 1) {
-    return null;
+  if (!candidates.length ||
+      new Set(candidates.map(c => c.time + " " + c.zone.toLowerCase())).size !== 1) {
+    return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
   }
   const found = candidates[0];
   return {
