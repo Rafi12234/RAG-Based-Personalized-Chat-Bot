@@ -17,7 +17,7 @@ function reportAnswerFailure(reason: string): never {
   if (process.env.DOCMIND_ANSWER_DIAGNOSTICS === "1") {
     console.error(`DocMind answer diagnostic: ${reason}`);
   }
-  throw new HttpError(503, "Answer service unavailable");
+  throw new HttpError(503, "Answer service unavailable", reason);
 }
 
 export type AnswerCitation = Readonly<{
