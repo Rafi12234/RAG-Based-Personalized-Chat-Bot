@@ -139,7 +139,13 @@ function extractNamedInfrastructureAnswer(
   if (!kind) return null;
   const candidates: Array<{ name: string; index: number }> = [];
   for (const [index, source] of sources.entries()) {
-    for (const { quote } of evidenceChoices(source, index)) {
+    // The model prompt caps evidence choices at 12. This narrow, source-only
+    // extractor may examine every complete sentence in the same authorized,
+    // already bounded 800-character excerpt (no additional I/O or data).
+    const spans = source.excerpt.slice(0, 800)
+      .split(/(?<=[.!?।])\s+|\r?\n+/u)
+      .map(part => part.trim()).filter(part => part.length >= 10);
+    for (const quote of spans) {
       let match: RegExpExecArray | null = null;
       if (kind === "vector_database" && /\bembeddings?\b/iu.test(quote)) {
         match = /\b(?:in|by|at)\s+([A-Za-z][A-Za-z0-9_-]{1,40})\s*,\s*(?:an?|the)\s+vector\s+database\b/iu.exec(quote);
@@ -524,8 +530,12 @@ export async function generateGroundedAnswer(
   // A missing or conflicting explicit fact must abstain, never borrow a
   // top-ranked but unrelated vector hit or manufacture a citation.
   if (/[\u0980-\u09FF]/u.test(question) && requestedInfrastructureKind(question)) {
-    return extractNamedInfrastructureAnswer(question, selected)
-      ?? { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+    const named = extractNamedInfrastructureAnswer(question, selected);
+    if (named) return named;
+    if (process.env.DOCMIND_ANSWER_DIAGNOSTICS === "1") {
+      console.error("DocMind answer diagnostic: multilingual_named_fact_missing_or_conflicting");
+    }
+    return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
   }
   const direct = extractDirectPolicyFact(question, selected);
   if (direct !== undefined) {
