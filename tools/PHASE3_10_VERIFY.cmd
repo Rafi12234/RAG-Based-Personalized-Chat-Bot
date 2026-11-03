@@ -26,29 +26,7 @@ call npm run build
 if errorlevel 1 goto failed
 
 echo [3/6] Backend offline tests: authorization, retrieval, grounding, transport
-call npx --no-install tsx --test ^
- tests/security.test.ts ^
- tests/answerApiSecurity.test.ts ^
- tests/answerDiagnosticVisibility.test.ts ^
- tests/databasePoolFailure.test.ts ^
- tests/evidenceConsistencyPhase37.test.ts ^
- tests/groundedAnswer.test.ts ^
- tests/groundedAnswerDimensions.test.ts ^
- tests/groundedAnswerFactualGrounding.test.ts ^
- tests/groundedAnswerPhase35.test.ts ^
- tests/groundedAnswerPhase36Adversarial.test.ts ^
- tests/groundedAnswerPhase38Cutoff.test.ts ^
- tests/groundedAnswerPhase38Duration.test.ts ^
- tests/groundedAnswerRobustness.test.ts ^
- tests/groundedAnswerStructured.test.ts ^
- tests/localMySqlAuth.test.ts ^
- tests/phase38AllCases.test.ts ^
- tests/phase39OllamaReliability.test.ts ^
- tests/retrievalApiSecurity.test.ts ^
- tests/retrievalBoundary.test.ts ^
- tests/retrievalPostFilter.test.ts ^
- tests/retrievalRanking.test.ts ^
- tests/transientDatabase.test.ts
+call npm run test:phase3
 if errorlevel 1 goto failed
 popd
 
