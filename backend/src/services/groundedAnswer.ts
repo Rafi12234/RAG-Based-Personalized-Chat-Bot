@@ -6,6 +6,7 @@ import { z } from "zod";
 import { HttpError } from "../lib/http.js";
 import { evidenceSupportsAnswerTerms } from "../lib/evidenceConsistency.js";
 import { extractExplicitDuration } from "../lib/explicitDuration.js";
+import { extractDirectPolicyFact } from "../lib/directPolicyFacts.js";
 import type { VerifiedSource } from "../lib/retrievalEligibility.js";
 
 const MAX_SOURCES = 5;
@@ -495,6 +496,17 @@ export async function generateGroundedAnswer(
   const extracted = extractHttpStatusAnswer(question, selected)
     ?? extractRouteDispatchCutoffAnswer(question, selected);
   if (extracted) return extracted;
+  const direct = extractDirectPolicyFact(question, selected);
+  if (direct !== undefined) {
+    if (direct === null) {
+      return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+    }
+    return {
+      status: "answered",
+      answer: direct.text + " [S" + (direct.index + 1) + "].",
+      citations: [citationFor(selected[direct.index], direct.index)],
+    };
+  }
   const duration = extractExplicitDuration(question, selected);
   if (duration !== undefined) {
     if (duration === null) {
