@@ -50,8 +50,8 @@ export function extractExplicitDuration(
       for (const found of sentence.matchAll(re)) {
         const preceding = sentence.slice(Math.max(0, (found.index ?? 0) - 16), found.index);
         const precedingClause = sentence.slice(0, found.index ?? 0);
-        if (/\\b(?:not|never)\\s*$/iu.test(preceding) ||
-            /\\b(?:must|should|do|does|will|shall|can)\\s+not\\b/iu.test(precedingClause)) {
+        if (/\b(?:not|never)\s*$/iu.test(preceding) ||
+            /\b(?:must|should|do|does|will|shall|can)\s+not\b/iu.test(precedingClause)) {
           continue;
         }
         const foundUnit: ExplicitDuration["unit"] = found[3].toLowerCase().startsWith("hour")
