@@ -49,7 +49,11 @@ export function extractExplicitDuration(
       const re = /\b(?:within|after|for|before)\s+([1-9]\d{0,3})\s+(business\s+)?(hours?|days?)\b/giu;
       for (const found of sentence.matchAll(re)) {
         const preceding = sentence.slice(Math.max(0, (found.index ?? 0) - 16), found.index);
-        if (/\b(?:not|never)\s*$/iu.test(preceding)) continue;
+        const precedingClause = sentence.slice(0, found.index ?? 0);
+        if (/\\b(?:not|never)\\s*$/iu.test(preceding) ||
+            /\\b(?:must|should|do|does|will|shall|can)\\s+not\\b/iu.test(precedingClause)) {
+          continue;
+        }
         const foundUnit: ExplicitDuration["unit"] = found[3].toLowerCase().startsWith("hour")
           ? "hours" : found[2] ? "business days" : "days";
         if (foundUnit !== unit) continue;
