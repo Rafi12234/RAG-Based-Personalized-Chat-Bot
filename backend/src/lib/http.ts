@@ -2,7 +2,12 @@ import type { ErrorRequestHandler, RequestHandler } from "express";
 import multer from "multer";
 
 export class HttpError extends Error {
-  constructor(public readonly status: number, message: string) {
+  constructor(
+    public readonly status: number,
+    message: string,
+    /** Optional internal reason code; never expose outside explicitly opted-in development diagnostics. */
+    public readonly diagnosticCode?: string,
+  ) {
     super(message);
     this.name = "HttpError";
   }
@@ -14,6 +19,17 @@ export const notFound: RequestHandler = (_req, res) => {
 
 export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, _next) => {
   if (error instanceof HttpError) {
+    // Local development only: a short allowlisted reason helps distinguish an
+    // invalid model attribution from a transport outage. Never expose source
+    // text, prompts, model output, SQL messages or arbitrary exception details.
+    if (process.env.NODE_ENV === "development" &&
+        process.env.DOCMIND_ANSWER_DIAGNOSTICS === "1" &&
+        error.status === 503 && error.message === "Answer service unavailable" &&
+        typeof error.diagnosticCode === "string" &&
+        /^[a-z0-9_]{1,64}$/u.test(error.diagnosticCode)) {
+      res.setHeader("X-DocMind-Diagnostic-Code", error.diagnosticCode);
+      res.setHeader("Access-Control-Expose-Headers", "X-DocMind-Diagnostic-Code");
+    }
     res.status(error.status).json({ success: false, message: error.message });
     return;
   }
