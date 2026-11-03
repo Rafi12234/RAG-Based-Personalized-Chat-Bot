@@ -81,7 +81,7 @@ void (async () => {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type":"application/json", "X-DocMind-Request":"1" },
-      body: JSON.stringify({question,topK:endpoint==="retrieve"?5:3}),
+      body: JSON.stringify({question,topK:kb==="document"?5:3}),
       signal: AbortSignal.timeout(endpoint==="retrieve"?45_000:130_000),
     });
     let body;
