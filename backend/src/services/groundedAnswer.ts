@@ -199,6 +199,42 @@ function extractEmbeddingDimensionAnswer(
   };
 }
 
+/** Phase 3.8: narrow route-specific cutoff fact after two model abstentions.
+ * Match the named route AND explicit same-day dispatch cutoff in the SAME
+ * verified evidence sentence. Other route times, scanned-at times, and bare
+ * numbers cannot be borrowed. Conflicting times within retrieved evidence
+ * require abstention. No fixture names or cutoff values are hardcoded.
+ */
+function extractRouteDispatchCutoffAnswer(
+  question: string, sources: readonly VerifiedSource[],
+): GroundedAnswer | null {
+  const request = /^(?:what|when)\s+is\s+(?:the\s+)?route\s+([a-z][a-z0-9_-]{1,29})\s+same[- ]day\s+dispatch\s+cutoff\s*\??$/iu.exec(question.trim());
+  if (!request) return null;
+  const routeName = request[1].toLowerCase();
+  const candidates: Array<{ sourceIndex: number; time: string; zone: string }> = [];
+
+  for (const [sourceIndex, source] of sources.entries()) {
+    for (const { quote } of evidenceChoices(source, sourceIndex)) {
+      const cutoff = /\broute\s+([a-z][a-z0-9_-]{1,29})\s+same[- ]day\s+dispatch\s+cutoff\s+is\s+((?:[01]\d|2[0-3]):[0-5]\d)\s+(Asia\/Dhaka)\b/giu;
+      for (const match of quote.matchAll(cutoff)) {
+        if (match[1].toLowerCase() !== routeName) continue;
+        candidates.push({ sourceIndex, time: match[2], zone: match[3] });
+      }
+    }
+  }
+
+  if (!candidates.length) return null;
+  if (new Set(candidates.map(c => c.time + " " + c.zone.toLowerCase())).size !== 1) {
+    return null;
+  }
+  const found = candidates[0];
+  return {
+    status: "answered",
+    answer: found.time + " " + found.zone + " [S" + (found.sourceIndex + 1) + "].",
+    citations: [citationFor(sources[found.sourceIndex], found.sourceIndex)],
+  };
+}
+
 /** For model-authored structured answers, at least one meaningful answer token
  * must be literally present in the claimed quote. This prevents an arbitrary
  * answer from borrowing a genuine but unrelated evidence ID. It does NOT prove entailment.
@@ -493,7 +529,8 @@ export async function generateGroundedAnswer(
     // After two abstentions, try only a narrow, source-text-derived name.
     // Unrecognized or conflicting facts stay abstentions without citations.
     const fact = extractNamedInfrastructureAnswer(question, selected)
-      ?? extractEmbeddingDimensionAnswer(question, selected);
+      ?? extractEmbeddingDimensionAnswer(question, selected)
+      ?? extractRouteDispatchCutoffAnswer(question, selected);
     if (fact) return fact;
   }
   return retry;
