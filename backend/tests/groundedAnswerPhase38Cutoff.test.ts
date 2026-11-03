@@ -35,7 +35,7 @@ test("phase3.8: East cutoff comes from verified policy, never another route", as
   assert.equal(answer.answer, "14:30 Asia/Dhaka [S1].");
   assert.equal(answer.citations.length, 1);
   assert.equal(answer.citations[0].documentTitle, "phase3_8_dispatch_policy.txt");
-  assert.equal(modelCalls, 2);
+  assert.equal(modelCalls, 0); // exact evidence resolves without Ollama
 });
 
 test("phase3.8: East cutoff can cite second source in a ranked response", async () => {
@@ -78,4 +78,26 @@ test("phase3.8: contradictory East cutoff causes abstention", async () => {
   const { answer } = await run("What is the Route East same-day dispatch cutoff?", [policy, contradictory]);
   assert.equal(answer.status, "insufficient_evidence");
   assert.deepEqual(answer.citations, []);
+});
+
+test("phase3.8: model transport failure cannot prevent exact cutoff extraction", async () => {
+  const result = await generateGroundedAnswer(
+    "What is the Route East same-day dispatch cutoff?",
+    [policy, counterstatement],
+    async () => { throw new Error("Simulated Ollama outage"); },
+  );
+  assert.equal(result.answer, "14:30 Asia/Dhaka [S1].");
+});
+
+test("phase3.8: conflicting or missing cutoff never invokes model", async () => {
+  for (const sources of [[policy, counterstatement], [counterstatement]]) {
+    const question = sources.length === 2
+      ? "What is the Route North same-day dispatch cutoff?"
+      : "What is the Route East same-day dispatch cutoff?";
+    const result = await generateGroundedAnswer(question, sources, async () => {
+      throw new Error("Model should not be called");
+    });
+    assert.equal(result.status, "insufficient_evidence");
+    assert.equal(result.citations.length, 0);
+  }
 });
