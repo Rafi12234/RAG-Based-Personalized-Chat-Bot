@@ -92,15 +92,13 @@ test("factual: focused retry cannot cite different source", async () => {
   }), HttpError);
   assert.equal(calls, 2);
 });
-test("factual: mixed-language storage query focuses correct source", async () => {
+test("factual: mixed-language storage query uses correct verified source without model", async () => {
   let calls = 0;
-  const result = await generateGroundedAnswer("DocMind-AI source documents কোন object store-এ থাকে?", [vectors, storage], async prompt => {
+  const result = await generateGroundedAnswer("DocMind-AI source documents কোন object store-এ থাকে?", [vectors, storage], async () => {
     calls++;
-    if (calls === 1) return abstain;
-    assert.match(prompt, /S2/);
-    return supported("RustFS", "S2", "E2_1");
+    throw new Error("Explicit verified named fact should not invoke the model");
   });
   assert.equal(result.answer, "RustFS [S2].");
   assert.equal(result.citations[0].documentId, storage.documentId);
-  assert.equal(calls, 2);
+  assert.equal(calls, 0);
 });
