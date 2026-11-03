@@ -1,4 +1,4 @@
-name: Phase 1 checks
+name: DocMind CI - Phase 1 through Phase 3
 on:
   push:
   pull_request:
@@ -53,6 +53,8 @@ jobs:
         run: cd backend && npx prisma migrate deploy
       - name: Check backend and integration tests
         run: cd backend && npm run typecheck && npm run build && npm test
+      - name: Phase 3.9 and 3.10 offline RAG security and grounding regressions
+        run: cd backend && npm run test:phase3
 
   frontend:
     runs-on: ubuntu-latest
