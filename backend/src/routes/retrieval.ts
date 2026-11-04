@@ -135,7 +135,7 @@ export function createRetrievalRouter(deps: RetrievalRouteDependencies = product
       success: true,
       ...generated,
       engineVersion: ANSWER_ENGINE_VERSION,
-      ...(diagnosticsEnabled && resolution ? { diagnostic: resolution } : {}),
+      ...(diagnosticsEnabled && resolution ? { diagnostic: resolution, verifiedSourceCount: sources.length } : {}),
     });
   });
   return router;
