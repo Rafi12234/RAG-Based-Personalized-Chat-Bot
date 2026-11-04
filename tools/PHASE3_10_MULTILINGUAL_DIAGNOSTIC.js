@@ -8,7 +8,8 @@
  * (c) canonical English paraphrase, topK=5
  * Then three original-question answers with topK=5.
  *
- * Displays only file titles, numeric scores, matching evidence boolean,
+ * Displays only file titles, numeric scores, and separate name/type/relation booleans.
+ * The full source-document relation is checked, not just the RustFS name phrase.
  * response status and diagnostic reason; NO raw excerpts or credentials.
  */
 void (async () => {
@@ -18,17 +19,23 @@ void (async () => {
     {id:"bn-vectors",q:"ডকুমেন্ট এমবেডিং কোন ভেক্টর ডাটাবেসে রাখা হয়?",
      canonical:"Which vector database stores DocMind-AI document embeddings?",
      file:"phase3_3d_vectors.txt",
-     contains:/\b(?:stores\s+document\s+embeddings\s+in\s+Qdrant|Qdrant,\s+a\s+vector\s+database)\b/iu,
+     name:/\bQdrant\b/iu, type:/\bvector\s+database\b/iu,
+     relation:/\bstores\s+document\s+embeddings\s+in\s+Qdrant\b/iu,
+     contains:/\bstores\s+document\s+embeddings\s+in\s+Qdrant,\s+a\s+vector\s+database\b/iu,
      fact:/\bQdrant\b|কিউড্রান্ট/iu},
     {id:"bn-storage",q:"আপলোড করা মূল ফাইলগুলো কোন স্টোরেজে রাখা হয়?",
      canonical:"Which S3-compatible object store holds uploaded source documents?",
      file:"phase3_3d_storage.txt",
-     contains:/\bRustFS\s+is\s+the\s+S3-compatible\s+object\s+store\b/iu,
+     name:/\bRustFS\b/iu, type:/\bS3-compatible\s+object\s+store\b/iu,
+     relation:/\bholds\s+uploaded\s+source\s+documents\b/iu,
+     contains:/\bRustFS\s+is\s+the\s+S3-compatible\s+object\s+store\s+that\s+holds\s+uploaded\s+source\s+documents\b/iu,
      fact:/\bRustFS\b|রাস্টএফএস/iu},
     {id:"mixed-storage",q:"DocMind-AI source documents কোন object store-এ থাকে?",
      canonical:"Which S3-compatible object store holds uploaded source documents?",
      file:"phase3_3d_storage.txt",
-     contains:/\bRustFS\s+is\s+the\s+S3-compatible\s+object\s+store\b/iu,
+     name:/\bRustFS\b/iu, type:/\bS3-compatible\s+object\s+store\b/iu,
+     relation:/\bholds\s+uploaded\s+source\s+documents\b/iu,
+     contains:/\bRustFS\s+is\s+the\s+S3-compatible\s+object\s+store\s+that\s+holds\s+uploaded\s+source\s+documents\b/iu,
      fact:/\bRustFS\b|রাস্টএফএস/iu},
   ];
   const req=async (path,q,topK)=> {
@@ -58,6 +65,9 @@ void (async () => {
           expected_file:sources.some(s=>s.documentTitle===item.file),
           expected_fact:sources.some(s=>s.documentTitle===item.file&&
             item.contains.test(typeof s.excerpt==="string"?s.excerpt:"")),
+          name_present:sources.some(s=>s.documentTitle===item.file&&item.name.test(typeof s.excerpt==="string"?s.excerpt:"")),
+          type_present:sources.some(s=>s.documentTitle===item.file&&item.type.test(typeof s.excerpt==="string"?s.excerpt:"")),
+          relation_present:sources.some(s=>s.documentTitle===item.file&&item.relation.test(typeof s.excerpt==="string"?s.excerpt:"")),
           files:sources.map(s=>s.documentTitle).join(" | "),
           diagnostic:r.code||r.data.message||"-"});
       }catch{
