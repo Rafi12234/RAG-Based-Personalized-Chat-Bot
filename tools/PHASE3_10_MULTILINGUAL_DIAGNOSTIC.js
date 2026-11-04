@@ -93,11 +93,14 @@ void (async () => {
       answers.push({case_id:item.id,http:r.http,status:r.data.status||"-",
         factual_answer:item.fact.test(answer),
         correct_citation:citations.length===1&&citations[0].documentTitle===item.file,
-        diagnostic:r.code||r.data.message||"-",
+        diagnostic:r.data.diagnostic||r.code||r.data.message||"-",
+        verified_sources:Number.isInteger(r.data.verifiedSourceCount)?r.data.verifiedSourceCount:"-",
+        engine_version:typeof r.data.engineVersion==="string"?r.data.engineVersion:"-",
         pass:passed});
     }catch{
       answers.push({case_id:item.id,http:"network",status:"-",
-        factual_answer:false,correct_citation:false,diagnostic:"network_or_timeout",pass:false});
+        factual_answer:false,correct_citation:false,diagnostic:"network_or_timeout",
+        verified_sources:"-",engine_version:"-",pass:false});
     }
   }
   console.log("PHASE 3.10 TOPK5 RECHECK:");
