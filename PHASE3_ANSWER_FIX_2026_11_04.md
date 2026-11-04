@@ -53,3 +53,18 @@ Do not claim success on the user machine until a post-pull frontend run verifies
 GitHub Actions CI runs backend typecheck/build, API integration tests against isolated CI MySQL, the entire offline Phase 3 security/grounding/transport suite, frontend lint/build and Python syntax checks. The new HTTP test failed on the escaped-newline bug and passed after the normalization fix.
 
 **Limitations:** GitHub cannot connect to the user's private `localhost:4000`, so CI success cannot prove that Windows is running the correct process or that the specific live KB has no additional source-formatting differences. The new user-facing Q&A is a Phase 3 pilot, not yet a fully featured chat-history product. Phase 4 may add conversation sessions and source navigation, and production hardening remains later work.
+
+## Addendum: Named infrastructure resolution r2 (November 4, 2026)
+
+A live screenshot on the verified r1 answer engine showed a Bangla vector-database question returning insufficient evidence and the coarse code `named_fact_missing_or_conflicting`. That rules out an outdated backend for the screenshot. It does not yet prove whether the exact verified /answer excerpts failed pattern matching or contained conflicting names.
+
+- The shared narrow extractor now lives in `backend/src/lib/namedInfrastructure.ts` and reads only verified, source-scoped excerpts.
+- It normalizes actual and literal escaped line breaks, requires a supported name and relationship in the same source sentence, and never hardcodes Qdrant, RustFS, or knowledge-base identifiers.
+- It distinguishes missing evidence (`named_fact_missing`) from contradictory names (`named_fact_conflict`); conflict still abstains.
+- Regression tests include the original Phase 3 QA corpus files, literal line breaks, changed source order, negation, and conflicts.
+- The answer engine marker is `phase3.10-grounded-2026-11-04-r2` and the frontend checks it before permitting questions.
+- The answer result card identifies the selected knowledge base. Local opt-in diagnostics additionally display verified passage count and a sanitized resolution code.
+
+**Status:** CI verified these changes. The original live 25/28 score remains the last confirmed end-to-end acceptance result until the user pulls r2 and tests the three failures through the normal frontend. Do not claim 28/28 prematurely.
+
+**Normal verification:** pull only `feature/phase3-secure-retrieval`; restart Node and React from the updated directory; leave existing Python retrieval and Docker services running; select the QA knowledge base containing `phase3_3d_vectors.txt` and `phase3_3d_storage.txt`; ask via the frontend, not browser DevTools. Check the selected KB, engine version, citation document title, and any safe diagnostics.
