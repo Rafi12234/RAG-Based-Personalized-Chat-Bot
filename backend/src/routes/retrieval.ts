@@ -6,6 +6,7 @@ import { Router, type Request, type RequestHandler } from "express";
 import { rateLimit } from "express-rate-limit";
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../lib/http.js";
+import { ANSWER_ENGINE_VERSION, type AnswerResolutionCode } from "../lib/answerRuntime.js";
 import { idSchema } from "../lib/validate.js";
 import { parseRetrievalRequest } from "../lib/retrievalValidation.js";
 import type { RelationalSource, RetrievedPoint, TrustedRetrievalScope, VerifiedSource } from "../lib/retrievalEligibility.js";
@@ -120,10 +121,22 @@ export function createRetrievalRouter(deps: RetrievalRouteDependencies = product
   router.post("/:knowledgeBaseId/answer", answerLimiter, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     const { question, sources, kb, userId } = await verifiedSearch(deps, req);
-    const generated = await generateGroundedAnswer(question, sources, deps.generateFromPrompt);
+    let resolution: AnswerResolutionCode | undefined;
+    const generated = await generateGroundedAnswer(question, sources, deps.generateFromPrompt, code => {
+      resolution = code;
+    });
     // Local generation can be slow; membership may have changed during inference.
     await authorizeAgain(deps, userId, kb);
-    res.json({ success: true, ...generated });
+    // The version is a non-sensitive contract marker. The optional resolution
+    // code is development-only, and carries neither source excerpts nor prompts.
+    const diagnosticsEnabled = process.env.NODE_ENV === "development" &&
+      process.env.DOCMIND_ANSWER_DIAGNOSTICS === "1";
+    res.json({
+      success: true,
+      ...generated,
+      engineVersion: ANSWER_ENGINE_VERSION,
+      ...(diagnosticsEnabled && resolution ? { diagnostic: resolution } : {}),
+    });
   });
   return router;
 }
