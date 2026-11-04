@@ -18,6 +18,7 @@ type AnswerResponse = {
   engineVersion?: string;
   /** Present only with explicitly enabled local development diagnostics. */
   diagnostic?: string;
+  verifiedSourceCount?: number;
 };
 
 type Props = {
@@ -205,6 +206,9 @@ export default function AnswerPanel({ knowledgeBaseId, knowledgeBaseName }: Prop
                   : "Backend version missing — an older server may still be running"}
               </span>
               {result.diagnostic && <span>Resolution: {result.diagnostic}</span>}
+              {typeof result.verifiedSourceCount === "number" && (
+                <span>Verified passages considered: {result.verifiedSourceCount}</span>
+              )}
             </div>
           </div>
         )}
