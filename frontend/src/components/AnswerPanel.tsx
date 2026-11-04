@@ -40,6 +40,7 @@ export default function AnswerPanel({ knowledgeBaseId, knowledgeBaseName }: Prop
 
   useEffect(() => () => {
     active.current?.abort();
+    active.current = null;
   }, []);
 
   async function submitQuestion(event: FormEvent<HTMLFormElement>) {
@@ -123,7 +124,7 @@ export default function AnswerPanel({ knowledgeBaseId, knowledgeBaseName }: Prop
         <div className="answer-form-footer">
           <span className="answer-counter">{question.length}/1000 characters</span>
           <div className="answer-controls">
-            <button className="secondary" type="button" disabled={pending && !active.current} onClick={reset}>
+            <button className="secondary" type="button" onClick={reset}>
               Clear
             </button>
             <button className="primary" type="submit" disabled={pending || question.trim().length < 2}>
