@@ -68,7 +68,7 @@ test("factual: unrelated answer cannot borrow real quote", () => {
 });
 test("factual: unnecessary model abstention retries once with focused evidence", async () => {
   let calls = 0;
-  const result = await generateGroundedAnswer("Which vector database stores document embeddings?", [vectors], async prompt => {
+  const result = await generateGroundedAnswer("Where are DocMind-AI document embeddings stored?", [vectors], async prompt => {
     calls++;
     if (calls === 1) return abstain;
     assert.match(prompt, /SOURCE FACTS/);
@@ -87,7 +87,7 @@ test("factual: model's unrelated but genuine citation cannot answer Atlantis que
 });
 test("factual: focused retry cannot cite different source", async () => {
   let calls = 0;
-  await assert.rejects(generateGroundedAnswer("Which object store holds uploaded source documents?", [vectors, storage], async () => {
+  await assert.rejects(generateGroundedAnswer("Where are uploaded source documents stored?", [vectors, storage], async () => {
     calls++; return calls === 1 ? abstain : supported("Qdrant", "S1", "E1_1");
   }), HttpError);
   assert.equal(calls, 2);
