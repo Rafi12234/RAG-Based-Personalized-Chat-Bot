@@ -25,6 +25,10 @@ type Props = {
   knowledgeBaseName: string;
 };
 
+// Versioned contract shared with the backend's authenticated read-only health
+// endpoint. Do not let a legacy Node process silently serve old QA behavior.
+const EXPECTED_ANSWER_ENGINE_VERSION = "phase3.10-grounded-2026-11-04-r1";
+
 /**
  * User-facing Phase 3 answer experience. Uses the same authenticated, scoped
  * /answer endpoint as the diagnostic scripts. No alternate route to Qdrant or
@@ -36,7 +40,22 @@ export default function AnswerPanel({ knowledgeBaseId, knowledgeBaseName }: Prop
   const [asked, setAsked] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [engineStatus, setEngineStatus] = useState<"checking" | "ready" | "outdated">("checking");
   const active = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    api<{ success: true; engineVersion: string }>("/answer-engine", { signal: controller.signal })
+      .then(info => {
+        if (!controller.signal.aborted) {
+          setEngineStatus(info.engineVersion === EXPECTED_ANSWER_ENGINE_VERSION ? "ready" : "outdated");
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setEngineStatus("outdated");
+      });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => () => {
     active.current?.abort();
@@ -46,7 +65,7 @@ export default function AnswerPanel({ knowledgeBaseId, knowledgeBaseName }: Prop
   async function submitQuestion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = question.trim();
-    if (active.current || text.length < 2 || text.length > 1000) return;
+    if (active.current || engineStatus !== "ready" || text.length < 2 || text.length > 1000) return;
 
     const controller = new AbortController();
     active.current = controller;
@@ -114,6 +133,13 @@ export default function AnswerPanel({ knowledgeBaseId, knowledgeBaseName }: Prop
         </div>
         <span className="answer-readonly">Read only</span>
       </div>
+      <div role="status" className={engineStatus === "outdated" ? "answer-engine-indicator warning" : "answer-engine-indicator"}>
+        {engineStatus === "checking" && "Checking answer backend version…"}
+        {engineStatus === "ready" && "Answer backend connected · current engine verified"}
+        {engineStatus === "outdated" && (
+          "The running backend is outdated or unreachable. Stop the old port 4000 process and restart the updated backend."
+        )}
+      </div>
 
       <form className="answer-form" onSubmit={submitQuestion}>
         <label htmlFor="answer-question">Your question</label>
@@ -134,7 +160,7 @@ export default function AnswerPanel({ knowledgeBaseId, knowledgeBaseName }: Prop
             <button className="secondary" type="button" onClick={reset}>
               Clear
             </button>
-            <button className="primary" type="submit" disabled={pending || question.trim().length < 2}>
+            <button className="primary" type="submit" disabled={pending || engineStatus !== "ready" || question.trim().length < 2}>
               {pending ? "Finding evidence…" : "Ask DocMind-AI"}
             </button>
           </div>
