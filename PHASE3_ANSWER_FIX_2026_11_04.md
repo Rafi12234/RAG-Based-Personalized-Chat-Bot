@@ -14,6 +14,7 @@ A full-stack regression check had been missing: earlier unit tests passed with c
 - `backend/src/services/groundedAnswer.ts`: structured, bounded source extraction normalizes actual/escaped line breaks; keeps conflict and unrelated-source abstention. Optional internal resolution trace identifies whether an answer used verified named evidence, another direct extractor, or a model path.
 - `backend/src/lib/answerRuntime.ts`: stable public `ANSWER_ENGINE_VERSION` constant for deployment/runtime parity.
 - `backend/src/routes/retrieval.ts`: authenticated `/answer` response includes `engineVersion` on success; optional allowlisted `diagnostic` only when `NODE_ENV=development` and `DOCMIND_ANSWER_DIAGNOSTICS=1`. No prompts, source excerpts, document text, secrets or raw errors are sent in this diagnostic.
+- `backend/src/app.ts`: authenticated, read-only `GET /api/v1/answer-engine` returns the safe version marker, allowing frontend parity checks **before** any question is sent.
 - `backend/src/server.ts`: prints backend answer engine version and PID on startup, so multiple/stale Windows processes can be identified.
 - `backend/tests/answerApiSecurity.test.ts`: HTTP tests execute real authenticated/verified routing with three ranked, READY source records, the three multilingual questions, and a provider that deliberately throws if invoked. Also checks citations, version, revocation and diagnostic visibility.
 - `frontend/src/components/AnswerPanel.tsx`: usable question form, citations, abstention/error states, abort-on-unmount, KB scoping, engine version and development-only reason display.
@@ -27,7 +28,7 @@ A full-stack regression check had been missing: earlier unit tests passed with c
 4. Backend CMD must print `DocMind answer engine phase3.10-grounded-2026-11-04-r1 (pid=...)`. If this line is missing, do **not** trust a subsequent test as validating the new code.
 5. Start/keep running the existing local Python retrieval API, local Ollama, Docker infrastructure and the frontend (`cd frontend && npm run dev`). Never rerun ingestion, indexing or Docker volume resets.
 6. Open `http://localhost:5173`, sign in, select the separate Phase 3.5/3.6 QA Knowledge Base and use **Ask your knowledge base**.
-7. The answer card should report `Answer engine: phase3.10-grounded-2026-11-04-r1`. If the marker is missing, an older/different backend responded. In opted-in development mode it also reports a safe resolution code.
+7. Before asking, the question panel must show `Answer backend connected · current engine verified`. It performs a read-only authenticated `GET /api/v1/answer-engine` preflight; if an older server is running, it shows a restart warning and disables the ask button. After answering, the card also shows `Answer engine: phase3.10-grounded-2026-11-04-r1`. In opted-in development mode it reports a safe resolution code.
 
 Recommended first smoke questions:
 - `ডকুমেন্ট এমবেডিং কোন ভেক্টর ডাটাবেসে রাখা হয়?` -> sourced **Qdrant**.
