@@ -34,15 +34,30 @@ const expected: Array<[string, string, string]> = [
 
 for (const [question, answer, title] of expected) {
   test("phase3.10 multilingual: evidence-first, no model: " + question, async () => {
+    let resolution: string | undefined;
     const result = await generateGroundedAnswer(question, [vectors, security, storage], async () => {
       throw new Error("Ollama must not be called for explicit verified infrastructure facts");
-    });
+    }, code => { resolution = code; });
+    assert.equal(resolution, "named_infrastructure");
     assert.equal(result.status, "answered");
     assert.equal(result.answer, answer);
     assert.deepEqual(result.citations.map(c => c.documentTitle), [title]);
     assert.equal(result.citations[0].sourceId, answer.match(/\[(S\d+)\]/u)?.[1]);
   });
 }
+
+test("phase3.10: English infrastructure question must also stay on evidence-first path", async () => {
+  let resolution: string | undefined;
+  const result = await generateGroundedAnswer(
+    "Which vector database stores DocMind-AI embeddings?",
+    [vectors, storage], async () => { throw new Error("Named facts must bypass Ollama"); },
+    code => { resolution = code; },
+  );
+  assert.equal(resolution, "named_infrastructure");
+  assert.equal(result.status, "answered");
+  assert.equal(result.answer, "Qdrant [S1].");
+  assert.equal(result.citations[0]?.documentTitle, vectors.documentTitle);
+});
 
 test("phase3.10 multilingual: verified source may appear at another rank", async () => {
   const result = await generateGroundedAnswer(

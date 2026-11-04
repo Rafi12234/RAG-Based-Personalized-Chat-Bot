@@ -495,11 +495,12 @@ export async function generateGroundedAnswer(
     onResolution?.("explicit_evidence");
     return extracted;
   }
-  // For explicitly named infrastructure in Bangla/mixed-language questions,
-  // resolve the name from source text BEFORE involving a small LLM.
+  // Resolve explicit, verified named infrastructure facts BEFORE any model call,
+  // regardless of question language. Never let a recognized name query fall
+  // through to a model that can abstain despite supported source evidence.
   // A missing or conflicting explicit fact must abstain, never borrow a
   // top-ranked but unrelated vector hit or manufacture a citation.
-  if (/[\u0980-\u09FF]/u.test(question) && infrastructureQuestionKind(question)) {
+  if (infrastructureQuestionKind(question) !== null) {
     const named = resolveNamedInfrastructure(question, selected);
     if (named.state === "found") {
       onResolution?.("named_infrastructure");

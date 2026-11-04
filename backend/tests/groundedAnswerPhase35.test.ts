@@ -32,9 +32,9 @@ for (const [question, expected, title] of [
     const { result, calls } = await answer(question, [security, storage, vectors]);
     assert.equal(result.answer, expected);
     assert.equal(result.citations[0]?.documentTitle, title);
-    // Explicit Bangla/mixed infrastructure facts can be resolved safely from
-    // verified evidence before sending an unreliable model request.
-    assert.equal(calls, /[\u0980-\u09FF]/u.test(question) ? 0 : 2);
+    // Every explicitly recognized infrastructure-name question must be answered
+    // from verified source text without an LLM (English, Bangla, or mixed).
+    assert.equal(calls, 0);
   });
 }
 test("phase3.5: unsupported English/Bangla/mixed questions abstain without citations", async () => {

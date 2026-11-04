@@ -98,6 +98,15 @@ void (async () => {
 
   // Reject missing or not-ready fixture documents before making answer calls.
   try {
+    const engine = await fetch(API+"/answer-engine",{
+      credentials:"include",signal:AbortSignal.timeout(15_000),
+    });
+    if(engine.status!==200) {console.error("Answer engine preflight HTTP "+engine.status+"; stop.");return;}
+    const engineInfo=await engine.json();
+    if(engineInfo.engineVersion!=="phase3.10-grounded-2026-11-04-r3") {
+      console.error("Expected Phase 3.10 r3 engine; restart updated backend before acceptance.");
+      return;
+    }
     const health = await fetch(API+"/health/database",{signal:AbortSignal.timeout(15_000)});
     console.log("Final acceptance DB preflight: HTTP",health.status);
     if(health.status!==200) {console.error("Database health failed; no tests started.");return;}
@@ -161,7 +170,10 @@ void (async () => {
     const reason=r.code||r.body.message||"-";
     rows.push({phase:item.phase,case_id:item.id,retrieval_http:retrievalHttp,evidence,
       answer_http:r.http,status:String(r.body.status??"-"),fact,citation,
-      reason:r.http===200?"-":reason,result});
+      reason:r.http===200?(r.body.diagnostic||"-"):reason,
+      verified_sources:Number.isInteger(r.body.verifiedSourceCount)?r.body.verifiedSourceCount:"-",
+      engine_version:typeof r.body.engineVersion==="string"?r.body.engineVersion:"-",
+      result});
     console.log(name+": "+result+(r.http!==200?" ("+reason+")":""));
     if(r.http===429) {console.error("Rate limited: stop other answer clients; incomplete gate.");break;}
   }
