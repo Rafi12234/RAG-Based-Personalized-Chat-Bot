@@ -1,6 +1,7 @@
 /** Direct evidence-fact resolver regressions. No Qdrant/DB/model dependencies. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { resolveNamedInfrastructure, infrastructureQuestionKind } from "../src/lib/namedInfrastructure.js";
 import type { VerifiedSource } from "../src/lib/retrievalEligibility.js";
 
@@ -107,4 +108,24 @@ test("negated statement does not count as affirmative evidence", () => {
 test("unknown question form is not automatically answered", () => {
   assert.deepEqual(resolveNamedInfrastructure("What was the invoice total?", [source(S)]),
     {state:"not_applicable"});
+});
+
+test("Phase 3 QA: actual repository fixture file bytes provide three supported facts", () => {
+  const vectors = readFileSync(
+    new URL("../../quality-fixtures/phase3_3d_vectors.txt", import.meta.url), "utf8",
+  );
+  const storage = readFileSync(
+    new URL("../../quality-fixtures/phase3_3d_storage.txt", import.meta.url), "utf8",
+  );
+  for (const [q, expected, index] of [
+    [VQ, "Qdrant", 0],
+    [SQ, "RustFS", 1],
+    [MQ, "RustFS", 1],
+  ] as const) {
+    const result = resolveNamedInfrastructure(q, [
+      source("passage: " + vectors, "phase3_3d_vectors.txt"),
+      source("passage: " + storage, "phase3_3d_storage.txt"),
+    ]);
+    assert.deepEqual(result, {state:"found",sourceIndex:index,name:expected});
+  }
 });
