@@ -128,3 +128,6 @@ td { padding: 15px 11px; border-top: 1px solid #edf1f6; color: #54637b; }
   .answer-controls { width: 100%; }
   .answer-controls button { flex: 1; }
 }
+
+.answer-engine-indicator { color: #266b51; background: #eefaf3; border: 1px solid #d4eddf; padding: 9px 12px; border-radius: 9px; margin-top: 16px; font-size: 12px; font-weight: 650; line-height: 1.5; }
+.answer-engine-indicator.warning { color: #923f35; background: #fff2ef; border-color: #f4d2cb; }
