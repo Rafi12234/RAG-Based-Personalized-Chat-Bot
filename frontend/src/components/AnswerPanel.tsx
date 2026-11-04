@@ -66,8 +66,15 @@ export default function AnswerPanel({ knowledgeBaseId, knowledgeBaseName }: Prop
       );
       if (controller.signal.aborted) return;
       if ((data.status !== "answered" && data.status !== "insufficient_evidence") ||
-          typeof data.answer !== "string" || !Array.isArray(data.citations)) {
-        throw new Error("Answer service returned an unexpected response.");
+          typeof data.answer !== "string" || !Array.isArray(data.citations) ||
+          (data.status === "answered" && (
+            !data.answer.trim() || data.citations.length === 0 ||
+            !data.citations.every(citation =>
+              typeof citation.sourceId === "string" &&
+              data.answer.includes(`[${citation.sourceId}]`))
+          )) ||
+          (data.status === "insufficient_evidence" && data.citations.length !== 0)) {
+        throw new Error("Answer service returned an unverified response.");
       }
       setResult(data);
     } catch (cause) {
