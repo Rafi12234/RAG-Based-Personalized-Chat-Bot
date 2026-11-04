@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, jsonBody } from "./api";
+import AnswerPanel from "./components/AnswerPanel";
 import "./App.css";
 
 type Role = "OWNER" | "ADMIN" | "MEMBER";
@@ -215,7 +216,7 @@ export default function App() {
       <section className="auth-panel">
         <p className="eyebrow">PRIVATE DOCUMENT INTELLIGENCE</p>
         <h1>{mode === "login" ? "Welcome back" : "Create your workspace"}</h1>
-        <p className="subtle">Manage documents securely. AI-powered question answering arrives in the next phases.</p>
+        <p className="subtle">Manage documents securely and ask evidence-grounded questions from your knowledge bases.</p>
         <form className="stack" onSubmit={submitAuth}>
           {mode === "register" && <label>Your name<input required minLength={2} maxLength={120} value={name} onChange={e => setName(e.target.value)} /></label>}
           <label>Email address<input required type="email" maxLength={191} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
@@ -248,7 +249,7 @@ export default function App() {
         <div className="side-profile"><div className="avatar">{user.name.slice(0, 1).toUpperCase()}</div><div className="side-user"><strong>{user.name}</strong><small>{user.email}</small></div><button title="Sign out" className="icon-button" onClick={logout} disabled={busy}>↪</button></div>
       </aside>
       <main className="main-content">
-        <header className="topbar"><div><p className="eyebrow">PHASE 1 · DOCUMENT FOUNDATION</p><h1>{selectedBase?.name || "Workspace overview"}</h1><p className="subtle">{selectedOrg?.name ?? "Select a workspace"} · {selectedOrg?.role ?? ""}</p></div><span className="stage-label">Ingestion in Phase 2</span></header>
+        <header className="topbar"><div><p className="eyebrow">PRIVATE DOCUMENT WORKSPACE · PHASE 3 PILOT</p><h1>{selectedBase?.name || "Workspace overview"}</h1><p className="subtle">{selectedOrg?.name ?? "Select a workspace"} · {selectedOrg?.role ?? ""}</p></div><span className="stage-label">Evidence-grounded Q&amp;A</span></header>
         {error && <p role="alert" className="message error">{error}</p>}
         {notice && <p role="status" className="message success">{notice}</p>}
         <div className="stat-grid">
@@ -256,6 +257,9 @@ export default function App() {
           <div className="stat"><span>Documents</span><strong>{bases.reduce((sum, b) => sum + (b._count?.documents ?? 0), 0)}</strong><small>Active in workspace</small></div>
           <div className="stat"><span>Members</span><strong>{members.length}</strong><small>With workspace access</small></div>
         </div>
+        {baseId && (
+          <AnswerPanel key={baseId} knowledgeBaseId={baseId} knowledgeBaseName={selectedBase?.name ?? "Selected knowledge base"} />
+        )}
         <div className="content-grid">
           <section className="panel wide"><div className="panel-heading"><div><h2>Documents</h2><p className="subtle">{selectedBase ? `${selectedBase.name} · supported formats: PDF, DOCX, TXT` : "Create or select a knowledge base to get started"}</p></div>{selectedBase && isManager && <div className="panel-actions"><button className="secondary" type="button" disabled={busy} onClick={editKB}>Edit collection</button><button className="secondary" type="button" disabled={busy} onClick={deleteKB}>Delete empty collection</button></div>}</div>
             {baseId ? <>
