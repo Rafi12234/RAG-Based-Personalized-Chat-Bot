@@ -1,6 +1,7 @@
 import app from "./app.js";
 import { env } from "./config/env.js";
 import { prisma } from "./config/prisma.js";
+import { ANSWER_ENGINE_VERSION } from "./lib/answerRuntime.js";
 
 async function startServer() {
   await prisma.$connect();
@@ -8,6 +9,7 @@ async function startServer() {
 
   const server = app.listen(env.PORT, () => {
     console.log(`DocMind-AI API listening at http://localhost:${env.PORT}`);
+    console.log(`DocMind answer engine ${ANSWER_ENGINE_VERSION} (pid=${process.pid})`);
   });
   let shuttingDown = false;
 
