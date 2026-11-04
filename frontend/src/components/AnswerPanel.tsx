@@ -181,7 +181,7 @@ export default function AnswerPanel({ knowledgeBaseId, knowledgeBaseName }: Prop
               <span className={result.status === "answered" ? "answer-state answered" : "answer-state abstained"}>
                 {result.status === "answered" ? "Evidence-backed answer" : "Insufficient evidence"}
               </span>
-              <span className="answer-readonly">Knowledge base scoped</span>
+              <span className="answer-readonly">Knowledge base: {knowledgeBaseName}</span>
             </div>
             <p className="answer-asked"><strong>Question:</strong> {asked}</p>
             <p className="answer-response">{result.answer}</p>
