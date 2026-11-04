@@ -8,6 +8,7 @@ import type { AnswerResolutionCode } from "../lib/answerRuntime.js";
 import { evidenceSupportsAnswerTerms } from "../lib/evidenceConsistency.js";
 import { extractExplicitDuration } from "../lib/explicitDuration.js";
 import { extractDirectPolicyFact } from "../lib/directPolicyFacts.js";
+import { infrastructureQuestionKind, resolveNamedInfrastructure } from "../lib/namedInfrastructure.js";
 import type { VerifiedSource } from "../lib/retrievalEligibility.js";
 
 const MAX_SOURCES = 5;
@@ -122,60 +123,16 @@ function extractHttpStatusAnswer(question: string, sources: readonly VerifiedSou
  * source documents, and derive names from a verified source sentence.
  * Names are not hardcoded and conflicting names fail closed.
  */
-function requestedInfrastructureKind(question: string): "vector_database" | "object_store" | null {
-  const asksName = /\b(?:which|what)\b|কোন/iu.test(question);
-  if (!asksName) return null;
-  const vector = /\bvector\s+database\b|ভেক্টর\s*ডাটাবেস/u.test(question) &&
-    /\bembeddings?\b|এমবেডিং|এম্বেডিং/iu.test(question);
-  const store = /\bobject\s+store\b|\bstorage\b|স্টোরেজ/u.test(question) &&
-    /\b(?:upload(?:ed)?|original|source|document(?:s)?|file(?:s)?)\b|আপলোড|মূল|ফাইল/u.test(question);
-  if (vector === store) return null;
-  return vector ? "vector_database" : "object_store";
-}
-
+/** Answer exact named facts from a single authorized source after conflict checks. */
 function extractNamedInfrastructureAnswer(
   question: string, sources: readonly VerifiedSource[],
 ): GroundedAnswer | null {
-  const kind = requestedInfrastructureKind(question);
-  if (!kind) return null;
-  const candidates: Array<{ name: string; index: number }> = [];
-  for (const [index, source] of sources.entries()) {
-    // The model prompt caps evidence choices at 12. This narrow, source-only
-    // extractor may examine every complete sentence in the same authorized,
-    // already bounded 800-character excerpt (no additional I/O or data).
-    // Qdrant source text can contain either real line breaks or literal
-    // escaped separators ("\\n", "\\r"). Normalize those ONLY for finding
-    // sentence boundaries. Otherwise the prefix 'n' may be falsely captured
-    // as part of the named product, e.g. "nRustFS".
-    const normalized = source.excerpt.slice(0, 800).replace(/\\[rn]/gu, "\n");
-    const spans = normalized
-      .split(/(?<=[.!?।])\s+|\r?\n+/u)
-      .map(part => part.trim()).filter(part => part.length >= 10);
-    for (const quote of spans) {
-      let match: RegExpExecArray | null = null;
-      if (kind === "vector_database" && /\bembeddings?\b/iu.test(quote)) {
-        match = /\b(?:in|by|at)\s+([A-Za-z][A-Za-z0-9_-]{1,40})\s*,\s*(?:an?|the)\s+vector\s+database\b/iu.exec(quote);
-        if (!match) {
-          match = /^([A-Za-z][A-Za-z0-9_-]{1,40})\s+(?:is|was)\s+(?:an?\s+|the\s+)?(?:[A-Za-z0-9-]+\s+){0,4}vector\s+database\b/iu.exec(quote);
-        }
-      }
-      if (kind === "object_store" && /\buploaded\b|\bsource\s+documents?\b/iu.test(quote)) {
-        // Verified chunks may carry a "passage:" or section-label prefix.
-        // Extract only an explicit named object-store assertion in the SAME
-        // evidence sentence as the uploaded/source-document claim.
-        match = /(?:^|[^A-Za-z0-9_-])([A-Za-z][A-Za-z0-9_-]{1,40})\s+(?:is|was)\s+(?:an?\s+|the\s+)?(?:[A-Za-z0-9-]+\s+){0,4}object\s+store\b/iu.exec(quote);
-      }
-      if (match) candidates.push({ name: match[1], index });
-    }
-  }
-  if (!candidates.length || new Set(candidates.map(candidate => candidate.name.toLowerCase())).size !== 1) {
-    return null;
-  }
-  const first = candidates[0];
+  const result = resolveNamedInfrastructure(question, sources);
+  if (result.state !== "found") return null;
   return {
     status: "answered",
-    answer: first.name + " [S" + (first.index + 1) + "].",
-    citations: [citationFor(sources[first.index], first.index)],
+    answer: result.name + " [S" + (result.sourceIndex + 1) + "].",
+    citations: [citationFor(sources[result.sourceIndex], result.sourceIndex)],
   };
 }
 
@@ -542,15 +499,20 @@ export async function generateGroundedAnswer(
   // resolve the name from source text BEFORE involving a small LLM.
   // A missing or conflicting explicit fact must abstain, never borrow a
   // top-ranked but unrelated vector hit or manufacture a citation.
-  if (/[\u0980-\u09FF]/u.test(question) && requestedInfrastructureKind(question)) {
-    const named = extractNamedInfrastructureAnswer(question, selected);
-    if (named) {
+  if (/[\u0980-\u09FF]/u.test(question) && infrastructureQuestionKind(question)) {
+    const named = resolveNamedInfrastructure(question, selected);
+    if (named.state === "found") {
       onResolution?.("named_infrastructure");
-      return named;
+      return {
+        status: "answered",
+        answer: named.name + " [S" + (named.sourceIndex + 1) + "].",
+        citations: [citationFor(selected[named.sourceIndex], named.sourceIndex)],
+      };
     }
-    onResolution?.("named_fact_missing_or_conflicting");
+    const reason = named.state === "conflict" ? "named_fact_conflict" : "named_fact_missing";
+    onResolution?.(reason);
     if (process.env.DOCMIND_ANSWER_DIAGNOSTICS === "1") {
-      console.error("DocMind answer diagnostic: multilingual_named_fact_missing_or_conflicting");
+      console.error("DocMind answer diagnostic: " + reason);
     }
     return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
   }
