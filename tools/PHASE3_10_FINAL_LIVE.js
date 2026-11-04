@@ -31,14 +31,18 @@ void (async () => {
     re.test(typeof source.excerpt === "string" ? source.excerpt : ""));
   const cases = [
     // Phase 3.5: 9 multilingual baseline cases.
-    {phase:"3.5",id:"en-vectors",kb:"earlier",q:"Which vector database stores DocMind-AI embeddings?",doc:NAMES.vectors,fact:/\bQdrant\b/iu},
+    {phase:"3.5",id:"en-vectors",kb:"earlier",q:"Which vector database stores DocMind-AI embeddings?",doc:NAMES.vectors,fact:/\bQdrant\b/iu,
+      evidence:s=>from(s,NAMES.vectors,/\bstores\s+document\s+embeddings\s+in\s+Qdrant,\s+a\s+vector\s+database/iu)},
     {phase:"3.5",id:"en-security",kb:"earlier",q:"What HTTP status code is returned when accessing an inaccessible knowledge base?",doc:NAMES.security,fact:/\b404\b|৪০৪/u},
     {phase:"3.5",id:"en-negative",kb:"earlier",q:"What is the favorite food of the founder of Atlantis?"},
-    {phase:"3.5",id:"bn-vectors",kb:"earlier",q:"ডকুমেন্ট এমবেডিং কোন ভেক্টর ডাটাবেসে রাখা হয়?",doc:NAMES.vectors,fact:/\bQdrant\b|কিউড্রান্ট/iu},
-    {phase:"3.5",id:"bn-storage",kb:"earlier",q:"আপলোড করা মূল ফাইলগুলো কোন স্টোরেজে রাখা হয়?",doc:NAMES.storage,fact:/\bRustFS\b|রাস্টএফএস/iu},
+    {phase:"3.5",id:"bn-vectors",kb:"earlier",q:"ডকুমেন্ট এমবেডিং কোন ভেক্টর ডাটাবেসে রাখা হয়?",doc:NAMES.vectors,fact:/\bQdrant\b|কিউড্রান্ট/iu,
+      evidence:s=>from(s,NAMES.vectors,/\bstores\s+document\s+embeddings\s+in\s+Qdrant,\s+a\s+vector\s+database/iu)},
+    {phase:"3.5",id:"bn-storage",kb:"earlier",q:"আপলোড করা মূল ফাইলগুলো কোন স্টোরেজে রাখা হয়?",doc:NAMES.storage,fact:/\bRustFS\b|রাস্টএফএস/iu,
+      evidence:s=>from(s,NAMES.storage,/\bRustFS\s+is\s+the\s+S3-compatible\s+object\s+store\s+that\s+holds\s+uploaded\s+source\s+documents/iu)},
     {phase:"3.5",id:"bn-negative",kb:"earlier",q:"চাঁদের রাজপ্রাসাদের ফোন নম্বর কত?"},
     {phase:"3.5",id:"mixed-security",kb:"earlier",q:"Cross-org KB access কোন HTTP status return করে?",doc:NAMES.security,fact:/\b404\b|৪০৪/u},
-    {phase:"3.5",id:"mixed-storage",kb:"earlier",q:"DocMind-AI source documents কোন object store-এ থাকে?",doc:NAMES.storage,fact:/\bRustFS\b|রাস্টএফএস/iu},
+    {phase:"3.5",id:"mixed-storage",kb:"earlier",q:"DocMind-AI source documents কোন object store-এ থাকে?",doc:NAMES.storage,fact:/\bRustFS\b|রাস্টএফএস/iu,
+      evidence:s=>from(s,NAMES.storage,/\bRustFS\s+is\s+the\s+S3-compatible\s+object\s+store\s+that\s+holds\s+uploaded\s+source\s+documents/iu)},
     {phase:"3.5",id:"mixed-negative",kb:"earlier",q:"DocMind-AI এর Mars headquarters address কী?"},
 
     // Phase 3.6: 9 adversarial/unsupported and positive-control cases.
@@ -49,8 +53,10 @@ void (async () => {
     {phase:"3.6",id:"bn-storage-cost",kb:"earlier",q:"আপলোড করা ফাইলের জন্য দৈনিক স্টোরেজ বিল কত?"},
     {phase:"3.6",id:"mixed-backup",kb:"earlier",q:"DocMind-AI Redis backup schedule কী?"},
     {phase:"3.6",id:"mixed-support-phone",kb:"earlier",q:"Cross-org KB access এর support phone number কী?"},
-    {phase:"3.6",id:"en-dimensions",kb:"earlier",q:"How many dimensions does the embedding model produce?",doc:NAMES.vectors,fact:/\b384\b/u},
-    {phase:"3.6",id:"mixed-object-store",kb:"earlier",q:"Which S3-compatible object store holds uploaded source documents?",doc:NAMES.storage,fact:/\bRustFS\b|রাস্টএফএস/iu},
+    {phase:"3.6",id:"en-dimensions",kb:"earlier",q:"How many dimensions does the embedding model produce?",doc:NAMES.vectors,fact:/\b384\b/u,
+      evidence:s=>from(s,NAMES.vectors,/\bembedding model\b[^.!?]{0,100}\b384-dimensional vectors\b/iu)},
+    {phase:"3.6",id:"mixed-object-store",kb:"earlier",q:"Which S3-compatible object store holds uploaded source documents?",doc:NAMES.storage,fact:/\bRustFS\b|রাস্টএফএস/iu,
+      evidence:s=>from(s,NAMES.storage,/\bRustFS\s+is\s+the\s+S3-compatible\s+object\s+store\s+that\s+holds\s+uploaded\s+source\s+documents/iu)},
 
     // Phase 3.8: 10 real retrieval + grounded answer tests.
     {phase:"3.8",id:"east-cutoff",kb:"document",q:"What is the Route East same-day dispatch cutoff?",doc:NAMES.policy,fact:/14:30\s+Asia\/Dhaka/iu,
@@ -81,7 +87,7 @@ void (async () => {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type":"application/json", "X-DocMind-Request":"1" },
-      body: JSON.stringify({question,topK:kb==="document"?5:3}),
+      body: JSON.stringify({question,topK:5}),
       signal: AbortSignal.timeout(endpoint==="retrieve"?45_000:130_000),
     });
     let body;
