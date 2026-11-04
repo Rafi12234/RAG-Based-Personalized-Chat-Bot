@@ -143,7 +143,12 @@ function extractNamedInfrastructureAnswer(
     // The model prompt caps evidence choices at 12. This narrow, source-only
     // extractor may examine every complete sentence in the same authorized,
     // already bounded 800-character excerpt (no additional I/O or data).
-    const spans = source.excerpt.slice(0, 800)
+    // Qdrant source text can contain either real line breaks or literal
+    // escaped separators ("\\n", "\\r"). Normalize those ONLY for finding
+    // sentence boundaries. Otherwise the prefix 'n' may be falsely captured
+    // as part of the named product, e.g. "nRustFS".
+    const normalized = source.excerpt.slice(0, 800).replace(/\\[rn]/gu, "\n");
+    const spans = normalized
       .split(/(?<=[.!?।])\s+|\r?\n+/u)
       .map(part => part.trim()).filter(part => part.length >= 10);
     for (const quote of spans) {
