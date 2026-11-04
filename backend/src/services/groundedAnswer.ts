@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import { HttpError } from "../lib/http.js";
+import type { AnswerResolutionCode } from "../lib/answerRuntime.js";
 import { evidenceSupportsAnswerTerms } from "../lib/evidenceConsistency.js";
 import { extractExplicitDuration } from "../lib/explicitDuration.js";
 import { extractDirectPolicyFact } from "../lib/directPolicyFacts.js";
@@ -519,19 +520,30 @@ export async function generateGroundedAnswer(
   question: string,
   sources: readonly VerifiedSource[],
   provider: (prompt: string) => Promise<string> = callLocalOllama,
+  onResolution?: (code: AnswerResolutionCode) => void,
 ): Promise<GroundedAnswer> {
-  if (!sources.length) return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+  if (!sources.length) {
+    onResolution?.("no_verified_sources");
+    return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+  }
   const selected = sources.slice(0, MAX_SOURCES);
   const extracted = extractHttpStatusAnswer(question, selected)
     ?? extractRouteDispatchCutoffAnswer(question, selected);
-  if (extracted) return extracted;
+  if (extracted) {
+    onResolution?.("explicit_evidence");
+    return extracted;
+  }
   // For explicitly named infrastructure in Bangla/mixed-language questions,
   // resolve the name from source text BEFORE involving a small LLM.
   // A missing or conflicting explicit fact must abstain, never borrow a
   // top-ranked but unrelated vector hit or manufacture a citation.
   if (/[\u0980-\u09FF]/u.test(question) && requestedInfrastructureKind(question)) {
     const named = extractNamedInfrastructureAnswer(question, selected);
-    if (named) return named;
+    if (named) {
+      onResolution?.("named_infrastructure");
+      return named;
+    }
+    onResolution?.("named_fact_missing_or_conflicting");
     if (process.env.DOCMIND_ANSWER_DIAGNOSTICS === "1") {
       console.error("DocMind answer diagnostic: multilingual_named_fact_missing_or_conflicting");
     }
@@ -540,8 +552,10 @@ export async function generateGroundedAnswer(
   const direct = extractDirectPolicyFact(question, selected);
   if (direct !== undefined) {
     if (direct === null) {
+      onResolution?.("direct_policy_insufficient");
       return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
     }
+    onResolution?.("direct_policy");
     return {
       status: "answered",
       answer: direct.text + " [S" + (direct.index + 1) + "].",
@@ -551,14 +565,17 @@ export async function generateGroundedAnswer(
   const duration = extractExplicitDuration(question, selected);
   if (duration !== undefined) {
     if (duration === null) {
+      onResolution?.("duration_insufficient");
       return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
     }
+    onResolution?.("duration_fact");
     return {
       status: "answered",
       answer: `${duration.amount} ${duration.unit} [S${duration.sourceIndex + 1}].`,
       citations: [citationFor(selected[duration.sourceIndex], duration.sourceIndex)],
     };
   }
+  onResolution?.("model_path");
   const prompt = buildEvidencePrompt(question, selected);
   const raw = await provider(prompt);
   try {
