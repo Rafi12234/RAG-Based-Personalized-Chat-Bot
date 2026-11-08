@@ -9,6 +9,7 @@ import {
   SESSION_COOKIE, hashToken, newSessionToken, sessionCookieOptions, sessionExpiry,
 } from "../lib/security.js";
 import { currentUserId, requireAuth } from "../middleware/auth.js";
+import { requestPasswordReset, redeemPasswordReset, RESET_REQUEST_REPLY } from "../services/passwordReset.js";
 
 export const authRouter = Router();
 const authLimiter = rateLimit({ windowMs: 15 * 60_000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false });
@@ -20,6 +21,9 @@ const registerSchema = z.object({
   organizationName: z.string().trim().min(2).max(150),
 });
 const loginSchema = z.object({ email, password: z.string().min(1) });
+const forgotSchema = z.object({ email });
+const resetSchema = z.object({ token: z.string().min(1).max(256), password: z.string().min(12).max(128) });
+const recoveryLimiter = rateLimit({ windowMs: 15 * 60_000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false });
 
 async function openSession(userId: string, res: import("express").Response) {
   const token = newSessionToken();
@@ -61,6 +65,21 @@ authRouter.post("/login", authLimiter, async (req, res) => {
   await openSession(user.id, res);
   const fullUser = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: userSelect });
   res.json({ success: true, user: fullUser });
+});
+
+// Public recovery routes: per-IP limiter, generic request responses and no tokens in URLs/logs.
+authRouter.post("/forgot-password", recoveryLimiter, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const input = parseInput(forgotSchema, req.body);
+  await requestPasswordReset(input.email);
+  res.json({ success: true, message: RESET_REQUEST_REPLY });
+});
+
+authRouter.post("/reset-password", recoveryLimiter, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const input = parseInput(resetSchema, req.body);
+  await redeemPasswordReset(input.token, input.password);
+  res.json({ success: true, message: "Password updated. Please sign in again." });
 });
 
 authRouter.get("/me", requireAuth, async (req, res) => {
