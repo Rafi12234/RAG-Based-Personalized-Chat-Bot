@@ -100,7 +100,7 @@ async function main(): Promise<void> {
     if (!owner || !owner.isActive || owner.memberships.length !== 1) {
       throw new Error("This account is not the active owner of the expected original QA workspace.");
     }
-    console.log(\`Verified the workspace OWNER account: \${owner.name}.\`);
+    console.log(`Verified the workspace OWNER account: ${owner.name}.`);
     const confirm = await ask("Type RECOVER ORIGINAL QA OWNER to confirm the password reset: ");
     if (confirm !== "RECOVER ORIGINAL QA OWNER") {
       throw new Error("Confirmation did not match. Nothing was changed.");
