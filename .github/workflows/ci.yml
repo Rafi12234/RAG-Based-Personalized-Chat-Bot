@@ -77,3 +77,6 @@ jobs:
           python-version: '3.12'
       - name: Syntax-check Python worker
         run: python -m compileall -q python-worker/worker
+      - name: Guarded automatic ingestion unit tests
+        working-directory: python-worker
+        run: python -m unittest worker.test_auto_ingestion_service
