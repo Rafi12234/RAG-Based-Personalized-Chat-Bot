@@ -20,9 +20,25 @@ Isolation: Neither final browser probe edits or reindexes the original Phase 2 K
 4. The local gate deliberately EXCLUDES backend/tests/api.integration.test.ts because it writes to its connected SQL database. GitHub Actions performs the API integration tests against a separate CI-only MySQL service.
 5. Start backend with NODE_ENV=development and DOCMIND_ANSWER_DIAGNOSTICS=1 (development diagnostic headers are opt-in). Keep other services running.
 6. Stop other benchmark scripts and answer clients (rate limit: four answer calls per minute).
-7. In another CMD at repository root: type tools\PHASE3_10_FINAL_LIVE.js | clip
+7. In another CMD at repository root, copy the JavaScript with UTF-8-safe PowerShell (do NOT use `type ... | clip`, which can corrupt Bangla text):
+
+   ```cmd
+   powershell -NoProfile -Command "$s = Get-Content -LiteralPath 'tools\PHASE3_10_FINAL_LIVE.js' -Raw -Encoding UTF8; Set-Clipboard -Value $s; Write-Host ('Bangla preserved: ' + [bool]((Get-Clipboard -Raw) -match '[\u0980-\u09FF]'))"
+   ```
+
+   Confirm the output is `Bangla preserved: True`.
 8. Paste into logged-in local Chrome F12 Console once. It checks 28 Phase 3.5, 3.6 and 3.8 cases with pacing and prints one combined table.
 9. Controlled pilot acceptance requires 28/28 PASS, no failed or blocked cases, verified citations, and correct abstentions.
+
+## Final live acceptance evidence — 2026-11-08
+
+- Run location: logged-in local Chrome with original QA workspace membership.
+- Script: `tools/PHASE3_10_FINAL_LIVE.js`, copied using UTF-8-safe PowerShell; Bangla preservation confirmed true.
+- Runtime: `phase3.10-grounded-2026-11-04-r3`.
+- Final console output: **`PHASE 3.9 + 3.10 FINAL LIVE: 28/28 PASS; 0 FAIL; 0 BLOCKED; complete=true.`**
+- Controlled case groups: 3.5 (9 PASS), 3.6 (9 PASS), 3.8 (10 PASS).
+- Results include verified citations for answered cases and correct insufficiency/conflict abstentions.
+- This records the **live acceptance gate**, not independent proof of production readiness or arbitrary document entailment. Keep the offline verification and CI criteria separate.
 
 ## Go/no-go requirements
 
