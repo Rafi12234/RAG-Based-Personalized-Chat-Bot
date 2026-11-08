@@ -43,6 +43,22 @@ model User {
   memberships OrganizationMember[]
   documents   Document[]
   sessions    AuthSession[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+// Phase 4.1: hashed, one-time password-reset capability; never store the URL token.
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique @db.Char(64)
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  consumedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
 }
 
 model AuthSession {
