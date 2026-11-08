@@ -16,7 +16,7 @@ type Doc = { id: string; title: string; createdAt: string; uploadedById: string;
 type Reply<T> = { success: true } & T;
 
 export default function App() {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !new URLSearchParams(window.location.hash.slice(1)).has("reset"));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -81,19 +81,11 @@ export default function App() {
   }
 
   useEffect(() => {
-    // Reset tokens travel in the URL fragment, never the web-server request.
-    // Remove from browser history immediately before making any API requests.
-    const fragment = new URLSearchParams(window.location.hash.slice(1));
-    const token = fragment.get("reset");
-    if (token) {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-      setResetToken(token);
-      setMode("reset");
-      setUser(null);
-    }
-  }, []);
+    // Remove the one-time secret from browser history; do not retain it in a URL.
+    if (resetToken) window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, [resetToken]);
   useEffect(() => {
-    if (resetToken) { setLoading(false); return; }
+    if (resetToken) return;
     api<Reply<{ user: User }>>("/auth/me")
       .then(r => setUser(r.user))
       .catch(() => setUser(null))
