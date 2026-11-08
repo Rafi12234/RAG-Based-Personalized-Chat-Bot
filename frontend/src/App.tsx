@@ -21,8 +21,9 @@ export default function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [user, setUser] = useState<User | null>(null);
-  const [mode, setMode] = useState<"login" | "register" | "forgot" | "reset">("login");
-  const [resetToken, setResetToken] = useState("");
+  const [resetToken, setResetToken] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("reset") ?? "");
+  const [mode, setMode] = useState<"login" | "register" | "forgot" | "reset">(() =>
+    new URLSearchParams(window.location.hash.slice(1)).has("reset") ? "reset" : "login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -92,6 +93,7 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
+    if (resetToken) { setLoading(false); return; }
     api<Reply<{ user: User }>>("/auth/me")
       .then(r => setUser(r.user))
       .catch(() => setUser(null))
