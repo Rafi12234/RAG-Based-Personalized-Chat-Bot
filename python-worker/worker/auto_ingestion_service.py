@@ -21,6 +21,13 @@ ENABLE_FLAG = "DOCMIND_ENABLE_MULTI_KB_INGESTION"
 ENABLE_VALUE = "YES_FOR_LOCAL_TESTING"
 SCOPED_DISPATCH_FLAG = "DOCMIND_ENABLE_AUTODISPATCH"
 SCOPED_DISPATCH_VALUE = "YES_FOR_TESTING"
+# Legacy fixture KBs are permanently excluded from the local broad scheduler.
+# This is a safety backstop, not a permission bypass for other KBs.
+PROTECTED_QA_KBS = (
+    "cmvw9ro3w000548l1gkuh2gx8",  # Phase 2 pilot
+    "cmvxmqrea0000c8l1pcvmh7oa",  # Phase 3.3 QA
+    "cmvz6m3h10000qol1hoahhd6r",  # Phase 3.8 QA
+)
 MAX_SCOPES = 50
 DEFAULT_SCOPE_LIMIT = 20
 DEFAULT_INTERVAL = 15
@@ -66,7 +73,7 @@ def list_pending_knowledge_bases(*, scope_limit: int = DEFAULT_SCOPE_LIMIT,
     if connection_factory is None:
         from .db import get_connection
         connection_factory = get_connection
-    exclusions = tuple(dict.fromkeys(protected_ids))
+    exclusions = tuple(dict.fromkeys((*PROTECTED_QA_KBS, *protected_ids)))
     exclusion_clause = (
         " AND d.knowledgeBaseId NOT IN (" + ", ".join(["%s"] * len(exclusions)) + ")"
         if exclusions else ""
@@ -122,7 +129,7 @@ def run_round(*, publish: bool = False,
                      enabled=enabled, scoped_enabled=scoped_enabled)
     if discover is None:
         discover = list_pending_knowledge_bases
-    ids = discover(scope_limit=scope_limit, protected_ids=protected_ids)
+    ids = discover(scope_limit=scope_limit, protected_ids=tuple((*PROTECTED_QA_KBS, *protected_ids)))
     summary = {"mode": "active" if publish else "preview",
                "knowledge_bases_scanned": len(ids), "published": 0,
                "rejected_or_failed_scopes": 0}
@@ -131,7 +138,7 @@ def run_round(*, publish: bool = False,
     if dispatch is None:
         from .automatic_dispatcher import dispatch_scope_once
         dispatch = dispatch_scope_once
-    protected = set(protected_ids)
+    protected = set((*PROTECTED_QA_KBS, *protected_ids))
     for knowledge_base_id in ids:
         if not isinstance(knowledge_base_id, str) or not knowledge_base_id.strip() or knowledge_base_id in protected:
             summary["rejected_or_failed_scopes"] += 1
