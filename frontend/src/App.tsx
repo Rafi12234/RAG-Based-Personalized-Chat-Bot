@@ -21,7 +21,8 @@ export default function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [user, setUser] = useState<User | null>(null);
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgot" | "reset">("login");
+  const [resetToken, setResetToken] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -79,6 +80,18 @@ export default function App() {
   }
 
   useEffect(() => {
+    // Reset tokens travel in the URL fragment, never the web-server request.
+    // Remove from browser history immediately before making any API requests.
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const token = fragment.get("reset");
+    if (token) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      setResetToken(token);
+      setMode("reset");
+      setUser(null);
+    }
+  }, []);
+  useEffect(() => {
     api<Reply<{ user: User }>>("/auth/me")
       .then(r => setUser(r.user))
       .catch(() => setUser(null))
@@ -129,6 +142,25 @@ export default function App() {
       setUser(result.user);
       setPassword("");
       setNotice(`Welcome${mode === "register" ? " to DocMind-AI" : " back"}!`);
+    });
+  }
+  async function submitForgot(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    await run(async () => {
+      await api("/auth/forgot-password", { method: "POST", ...jsonBody({ email }) });
+      setNotice("If your email belongs to an active account, a reset link will be sent.");
+      setMode("login");
+      setPassword("");
+    });
+  }
+  async function submitReset(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    await run(async () => {
+      await api("/auth/reset-password", { method: "POST", ...jsonBody({ token: resetToken, password }) });
+      setResetToken("");
+      setPassword("");
+      setMode("login");
+      setNotice("Password updated. Please sign in with your new password.");
     });
   }
   async function logout() {
@@ -229,17 +261,35 @@ export default function App() {
       <div className="auth-brand"><span className="brand-mark">D</span> DocMind<span>AI</span></div>
       <section className="auth-panel">
         <p className="eyebrow">PRIVATE DOCUMENT INTELLIGENCE</p>
-        <h1>{mode === "login" ? "Welcome back" : "Create your workspace"}</h1>
-        <p className="subtle">Manage documents securely and ask evidence-grounded questions from your knowledge bases.</p>
-        <form className="stack" onSubmit={submitAuth}>
-          {mode === "register" && <label>Your name<input required minLength={2} maxLength={120} value={name} onChange={e => setName(e.target.value)} /></label>}
-          <label>Email address<input required type="email" maxLength={191} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
-          <label>Password<input required type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={mode === "register" ? 12 : 1} value={password} onChange={e => setPassword(e.target.value)} /></label>
-          {mode === "register" && <label>Workspace name<input required minLength={2} maxLength={150} value={organizationName} onChange={e => setOrganizationName(e.target.value)} /></label>}
-          {error && <p role="alert" className="message error">{error}</p>}
-          <button className="primary" disabled={busy}>{busy ? "Working…" : mode === "login" ? "Sign in" : "Create account"}</button>
-        </form>
-        <p className="auth-switch">{mode === "login" ? "New to DocMind-AI?" : "Already have an account?"} <button className="link-button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>{mode === "login" ? "Create account" : "Sign in"}</button></p>
+        <h1>{mode === "login" ? "Welcome back" : mode === "register" ? "Create your workspace" : mode === "forgot" ? "Reset your password" : "Choose a new password"}</h1>
+        <p className="subtle">{mode === "forgot" ? "Enter your registered email to request a 30-minute reset link." : mode === "reset" ? "Use a new password with at least 12 characters." : "Manage documents securely and ask evidence-grounded questions from your knowledge bases."}</p>
+        {mode === "forgot" ? (
+          <form className="stack" onSubmit={submitForgot}>
+            <label>Email address<input required type="email" maxLength={191} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
+            {error && <p role="alert" className="message error">{error}</p>}
+            <button className="primary" disabled={busy}>{busy ? "Working…" : "Send reset link"}</button>
+          </form>
+        ) : mode === "reset" ? (
+          <form className="stack" onSubmit={submitReset}>
+            <label>New password<input required type="password" minLength={12} maxLength={128} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} /></label>
+            {error && <p role="alert" className="message error">{error}</p>}
+            <button className="primary" disabled={busy || !resetToken}>{busy ? "Working…" : "Update password"}</button>
+          </form>
+        ) : (
+          <form className="stack" onSubmit={submitAuth}>
+            {mode === "register" && <label>Your name<input required minLength={2} maxLength={120} value={name} onChange={e => setName(e.target.value)} /></label>}
+            <label>Email address<input required type="email" maxLength={191} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
+            <label>Password<input required type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={mode === "register" ? 12 : 1} value={password} onChange={e => setPassword(e.target.value)} /></label>
+            {mode === "register" && <label>Workspace name<input required minLength={2} maxLength={150} value={organizationName} onChange={e => setOrganizationName(e.target.value)} /></label>}
+            {error && <p role="alert" className="message error">{error}</p>}
+            <button className="primary" disabled={busy}>{busy ? "Working…" : mode === "login" ? "Sign in" : "Create account"}</button>
+          </form>
+        )}
+        {notice && <p role="status" className="message success">{notice}</p>}
+        <p className="auth-switch">
+          {mode === "login" && <><button className="link-button" type="button" onClick={() => { setMode("forgot"); setError(""); }}>Forgot password?</button>{" · "}<button className="link-button" type="button" onClick={() => { setMode("register"); setError(""); }}>Create account</button></>}
+          {mode !== "login" && <button className="link-button" type="button" onClick={() => { setMode("login"); setPassword(""); setResetToken(""); setError(""); }}>Back to sign in</button>}
+        </p>
       </section>
       <p className="auth-foot">Your documents remain isolated by workspace membership.</p>
     </main>
