@@ -98,9 +98,23 @@ export default function App() {
     }
   }, [orgId]);
   useEffect(() => {
-    if (baseId) {
-      void Promise.resolve().then(() => refreshDocuments(baseId).catch(report));
-    }
+    if (!baseId) return;
+    let alive = true;
+    // Poll document ingestion state while this collection is selected. The
+    // backend remains authoritative; never mark a document READY in the UI.
+    const poll = async () => {
+      try {
+        const reply = await api<Reply<{ documents: Doc[] }>>(
+          `/knowledge-bases/${encodeURIComponent(baseId)}/documents`,
+        );
+        if (alive) setDocs(reply.documents);
+      } catch (err) {
+        if (alive) report(err);
+      }
+    };
+    void poll();
+    const interval = window.setInterval(() => { void poll(); }, 5000);
+    return () => { alive = false; window.clearInterval(interval); };
   }, [baseId]);
 
   async function submitAuth(e: FormEvent<HTMLFormElement>) {
