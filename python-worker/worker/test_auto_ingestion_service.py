@@ -40,7 +40,7 @@ class AutoIngestionServiceTests(unittest.TestCase):
                           "dispatchLeaseUntil", "nextAttemptAt",
                           "d.knowledgeBaseId NOT IN"):
             self.assertIn(condition, sql)
-        self.assertEqual(params, ("protected-one", "protected-two", 20))
+        self.assertEqual(params, (*service.PROTECTED_QA_KBS, "protected-one", "protected-two", 20))
         connection.commit.assert_not_called()
         connection.rollback.assert_called_once()
         connection.close.assert_called_once()
@@ -80,6 +80,7 @@ class AutoIngestionServiceTests(unittest.TestCase):
         for call in sender.call_args_list:
             kb = call.args[0]
             self.assertNotEqual(kb, "protected")
+            self.assertNotIn(kb, service.PROTECTED_QA_KBS)
             self.assertEqual(call.kwargs["confirm_knowledge_base_id"], kb)
             self.assertEqual(call.kwargs["env_flag"], service.SCOPED_DISPATCH_VALUE)
             self.assertTrue(call.kwargs["publish"])
