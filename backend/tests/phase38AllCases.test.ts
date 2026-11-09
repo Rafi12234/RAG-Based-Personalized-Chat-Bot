@@ -112,3 +112,46 @@ test("conflicting public telephone instructions do not yield a false absence cla
     "What is Cedarstone's public support telephone number?", [support, affirmative]
   ), undefined);
 });
+
+
+test("Phase4.1: Aurora retention wording answers a mixed Bangla-English question without an LLM", async () => {
+  const aurora = source(
+    "Resolved ticket attachments are retained for 30 days after resolution; they are then removed. " +
+    "Resolved ticket metadata is retained for 90 days after resolution.",
+    8, "aurora_support_rules.txt",
+  );
+  const result = await generateGroundedAnswer(
+    "Aurora resolved ticket attachments কত দিন retain করে?",
+    [policy, aurora],
+    async () => { throw new Error("Explicit verified retention must not invoke Ollama"); },
+  );
+  assert.equal(result.status, "answered");
+  assert.equal(result.answer, "30 days [S2].");
+  assert.equal(result.citations[0].documentTitle, "aurora_support_rules.txt");
+});
+
+test("Phase4.1: metadata retention cannot be confused with attachment retention", async () => {
+  const aurora = source(
+    "Resolved ticket attachments are retained for 30 days after resolution. " +
+    "Resolved ticket metadata is retained for 90 days after resolution.",
+    8, "aurora_support_rules.txt",
+  );
+  assert.equal(
+    extractDirectPolicyFact("How long is resolved ticket metadata retained?", [aurora])?.text,
+    "90 days",
+  );
+  assert.equal(
+    extractDirectPolicyFact("How long does Aurora keep resolved ticket attachments?", [aurora])?.text,
+    "30 days",
+  );
+});
+
+test("Phase4.1: conflicting or negated retention facts fail closed", () => {
+  const affirmative = source("Resolved ticket attachments are retained for 30 days after resolution.", 8, "aurora.txt");
+  const conflicting = source("Resolved ticket attachments are retained for 45 days after resolution.", 9, "conflict.txt");
+  const denied = source("Resolved ticket attachments are not retained for 30 days.", 6, "denied.txt");
+  const query = "Aurora resolved ticket attachments কত দিন retain করে?";
+  assert.equal(extractDirectPolicyFact(query, [affirmative, conflicting]), null);
+  assert.equal(extractDirectPolicyFact(query, [denied]), null);
+  assert.equal(extractDirectPolicyFact(query, [source("Resolved ticket metadata is retained for 90 days.", 6, "other.txt")]), null);
+});

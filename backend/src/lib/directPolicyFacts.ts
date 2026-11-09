@@ -43,9 +43,9 @@ const patterns = {
     "\\s+business\\s+days?\\s+after\\s+(the\\s+refund\\s+request\\s+is\\s+(?:approved|submitted|received|rejected))\\b", "giu"),
   ack: new RegExp("\\backnowledge\\s+a\\s+new\\s+ticket\\s+within\\s+" +
     AMOUNT + "\\s+business\\s+days?\\b", "giu"),
-  attachments: new RegExp("\\bresolved\\s+ticket\\s+attachments\\s+are\\s+removed\\s+after\\s+" +
+  attachments: new RegExp("\\bresolved\\s+ticket\\s+attachments\\s+are\\s+(?:retained\\s+for|removed\\s+after)\\s+" +
     AMOUNT + "\\s+days?\\b", "giu"),
-  metadata: new RegExp("\\bmetadata\\s+about\\s+the\\s+ticket\\s+is\\s+retained\\s+for\\s+" +
+  metadata: new RegExp("\\b(?:metadata\\s+about\\s+the\\s+ticket|resolved\\s+ticket\\s+metadata)\\s+is\\s+retained\\s+for\\s+" +
     AMOUNT + "\\s+days?\\b", "giu"),
   invoice: new RegExp("\\binvoice\\s+correction\\s+within\\s+" +
     AMOUNT + "\\s+business\\s+days?\\s+of\\s+receiving\\s+the\\s+invoice\\b", "giu"),
