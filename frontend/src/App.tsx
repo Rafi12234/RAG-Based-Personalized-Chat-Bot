@@ -104,25 +104,41 @@ export default function App() {
       ]).catch(report));
     }
   }, [orgId]);
+  // Ingestion status is the ONLY reason to poll. When every document is READY
+  // (or FAILED), stop background reads and reduce database authentication load.
+  // Uploads refresh the list and reactivate polling when a version is pending.
+  const hasPendingDocuments = docs.some(doc => doc.latestVersion &&
+    doc.latestVersion.status !== "READY" && doc.latestVersion.status !== "FAILED");
+
   useEffect(() => {
     if (!baseId) return;
     let alive = true;
-    // Poll document ingestion state while this collection is selected. The
-    // backend remains authoritative; never mark a document READY in the UI.
+    let inFlight = false;
+    const controller = new AbortController();
     const poll = async () => {
+      if (!alive || inFlight || document.visibilityState === "hidden") return;
+      inFlight = true;
       try {
         const reply = await api<Reply<{ documents: Doc[] }>>(
           `/knowledge-bases/${encodeURIComponent(baseId)}/documents`,
+          { signal: controller.signal },
         );
         if (alive) setDocs(reply.documents);
       } catch (err) {
-        if (alive) report(err);
+        if (alive && !controller.signal.aborted) report(err);
+      } finally {
+        inFlight = false;
       }
     };
     void poll();
-    const interval = window.setInterval(() => { void poll(); }, 5000);
-    return () => { alive = false; window.clearInterval(interval); };
-  }, [baseId]);
+    const interval = hasPendingDocuments
+      ? window.setInterval(() => { void poll(); }, 5000) : undefined;
+    return () => {
+      alive = false;
+      controller.abort();
+      if (interval !== undefined) window.clearInterval(interval);
+    };
+  }, [baseId, hasPendingDocuments]);
 
   async function submitAuth(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
