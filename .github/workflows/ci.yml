@@ -80,3 +80,6 @@ jobs:
       - name: Guarded automatic ingestion unit tests
         working-directory: python-worker
         run: python -m unittest worker.test_auto_ingestion_service
+      - name: Phase 4.1 offline AI quality evaluator unit tests
+        working-directory: python-worker
+        run: python -m unittest worker.test_phase4_ai_quality worker.test_phase3_retrieval_quality
