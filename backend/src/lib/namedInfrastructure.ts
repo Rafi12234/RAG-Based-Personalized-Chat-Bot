@@ -38,6 +38,12 @@ const VECTOR_PATTERNS = [
     String.raw`vector\s+database\s+(?:that|which)\s+(?:stores?|keeps?)\s+(?:document\s+|text\s+)?embeddings?\b`, "giu"),
 ];
 const STORE_PATTERNS = [
+  // "The document platform keeps original uploaded PDF, DOCX and TXT files
+  //  in RustFS, an S3-compatible object store."
+  // Keep the storage verb, file object, named target, and object-store identity
+  // in the SAME sentence. Formats/modifiers are limited to ordinary file terms.
+  new RegExp(String.raw`\b(?:keeps?|stores?|holds?|preserves?)\s+(?:(?:the|original|uploaded|source|customer|user|binary|raw|document|documents|pdf|docx|txt|file|files|and|or)\s*[,]?\s+){0,14}(?:documents?|files?)\s+(?:in|on|using)\s+` +
+    NAME + String.raw`\s*,\s*(?:an?\s+|the\s+)?` + QUALIFIER + String.raw`object\s+store\b`, "giu"),
   // "RustFS is the S3-compatible object store that holds uploaded source documents."
   new RegExp(String.raw`\b` + NAME +
     String.raw`\s+(?:is|was)\s+(?:an?\s+|the\s+)?` + QUALIFIER +
