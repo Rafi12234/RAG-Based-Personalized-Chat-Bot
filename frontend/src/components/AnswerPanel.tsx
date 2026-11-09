@@ -28,7 +28,7 @@ type Props = {
 
 // Versioned contract shared with the backend's authenticated read-only health
 // endpoint. Do not let a legacy Node process silently serve old QA behavior.
-const EXPECTED_ANSWER_ENGINE_VERSION = "phase3.10-grounded-2026-11-10-r4";
+const EXPECTED_ANSWER_ENGINE_VERSION = "phase3.10-grounded-2026-11-10-r5";
 
 /**
  * User-facing Phase 3 answer experience. Uses the same authenticated, scoped

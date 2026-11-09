@@ -501,11 +501,11 @@ export async function generateGroundedAnswer(
       onResolution?.("multi_document_insufficient");
       return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
     }
-    const citations = [paired.vectorSourceIndex, paired.retentionSourceIndex]
+    const citations = [paired.firstSourceIndex, paired.secondSourceIndex]
       .sort((a, b) => a - b).map(index => citationFor(selected[index], index));
     onResolution?.("multi_document_fact");
     return { status: "answered",
-      answer: `${paired.vectorName} [S${paired.vectorSourceIndex + 1}] and ${paired.retentionText} [S${paired.retentionSourceIndex + 1}].`,
+      answer: `${paired.firstFact} [S${paired.firstSourceIndex + 1}] and ${paired.secondFact} [S${paired.secondSourceIndex + 1}].`,
       citations };
   }
   const extracted = extractHttpStatusAnswer(question, selected)

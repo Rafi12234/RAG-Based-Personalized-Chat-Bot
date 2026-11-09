@@ -47,7 +47,7 @@ const patterns = {
     AMOUNT + "\\s+days?\\b", "giu"),
   metadata: new RegExp("\\b(?:metadata\\s+about\\s+the\\s+ticket|resolved\\s+ticket\\s+metadata)\\s+is\\s+retained\\s+for\\s+" +
     AMOUNT + "\\s+days?\\b", "giu"),
-  invoice: new RegExp("\\binvoice\\s+correction\\s+within\\s+" +
+  invoice: new RegExp("\\binvoice\\s+corrections?\\s+within\\s+" +
     AMOUNT + "\\s+business\\s+days?\\s+of\\s+receiving\\s+the\\s+invoice\\b", "giu"),
 } as const;
 
