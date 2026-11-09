@@ -149,3 +149,32 @@ test("Phase 4.1: wrong relationship and negated file-store claim remain unanswer
     assert.notEqual(resolveNamedInfrastructure(q, [source(sentence)]).state, "found");
   }
 });
+
+
+test("Phase 4.1: vector storage location must be extracted from matching dimensioned source fact", () => {
+  const q = "Where are the 384-dimensional vectors stored?";
+  const positive = "Qdrant stores the platform's 384-dimensional document embedding vectors and their chunk metadata.";
+  assert.equal(infrastructureQuestionKind(q), "vector_location");
+  assert.deepEqual(resolveNamedInfrastructure(q, [source(positive, "riverbend_platform.txt")]),
+    { state: "found", sourceIndex: 0, name: "Qdrant" });
+});
+
+test("Phase 4.1: vector location refuses mismatched dimensions, negation and unrelated storage", () => {
+  const q = "Where are the 384-dimensional vectors stored?";
+  for (const excerpt of [
+    "Qdrant stores the platform's 768-dimensional document embedding vectors.",
+    "Qdrant does not store the platform's 384-dimensional document embedding vectors.",
+    "RustFS stores original uploaded PDF files, not dense embedding vectors.",
+    "A document is called Qdrant but does not describe where 384-dimensional vectors are stored.",
+  ]) {
+    assert.notEqual(resolveNamedInfrastructure(q, [source(excerpt)]).state, "found");
+  }
+});
+
+test("Phase 4.1: conflicting dimension-matched vector locations are not guessed", () => {
+  const q = "Where are the 384-dimensional vectors stored?";
+  assert.deepEqual(resolveNamedInfrastructure(q, [
+    source("Qdrant stores the platform's 384-dimensional document embedding vectors."),
+    source("OtherDB stores the platform's 384-dimensional document embedding vectors."),
+  ]), { state: "conflict" });
+});
