@@ -69,6 +69,9 @@ export function extractBanglaDuration(
       if (!sameSubject(subject, sentence)) continue;
       // A negated or forbidden duration is not affirmative supporting evidence.
       if (/(?:\s|^)(?:না|নয়|নয়|নেই|নিষিদ্ধ)(?:\s|$)/u.test(sentence)) continue;
+      // Do not borrow another institution's policy merely because the product
+      // and action words overlap with this question.
+      if (/(?:অন্য|ভিন্ন|পৃথক)\s+(?:প্রতিষ্ঠান|দোকান|সংস্থা)(?:ের|ে|র)?/u.test(sentence)) continue;
       for (const match of sentence.matchAll(DURATION)) {
         if (kind(match[2]) !== unit) continue;
         const amount = numericValue(match[1]);
