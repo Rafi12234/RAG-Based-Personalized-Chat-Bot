@@ -4,6 +4,7 @@ import { PrismaClient } from "../generated/prisma/client.js";
 
 import { env } from "./env.js";
 import { allowLocalDevMySqlKeyRetrieval } from "../lib/localMySqlAuth.js";
+import { databasePoolTimeouts } from "../lib/databasePoolPolicy.js";
 
 const adapter = new PrismaMariaDb({
   host: env.DATABASE_HOST,
@@ -12,11 +13,10 @@ const adapter = new PrismaMariaDb({
   password: env.DATABASE_PASSWORD,
   database: env.DATABASE_NAME,
   connectionLimit: 5,
-  // Keep the pool at five connections. A local Docker/MySQL socket can
-  // sometimes take longer to initialize; acquisition timeout must exceed
-  // connection timeout to preserve the underlying driver error category.
-  connectTimeout: 10_000,
-  acquireTimeout: 20_000,
+  // Local Docker sockets occasionally exceed the 10-second connection
+  // deadline under concurrent frontend/AI workloads. Keep the five-connection
+  // limit; only relax bounded timeouts for the known local development port.
+  ...databasePoolTimeouts(env.NODE_ENV, env.DATABASE_HOST, env.DATABASE_PORT),
   allowPublicKeyRetrieval: allowLocalDevMySqlKeyRetrieval(env.NODE_ENV, env.DATABASE_HOST, env.DATABASE_PORT),
 });
 
