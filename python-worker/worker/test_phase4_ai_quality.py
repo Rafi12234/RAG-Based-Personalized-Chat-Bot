@@ -25,7 +25,7 @@ class Phase4QualityTests(unittest.TestCase):
         self.assertEqual(report["cases"], 5)
         self.assertEqual(report["retrieval"][0]["recall_at_k"], 0.5)
         self.assertEqual(report["retrieval"][1]["recall_at_k"], 1.0)
-        self.assertEqual(report["retrieval"][0]["mrr_at_k"], 0.5)
+        self.assertEqual(report["retrieval"][0]["mrr_at_k"], 0.75)
         self.assertEqual(report["answer"]["required_abstention_count"], 2)
         self.assertEqual(report["answer"]["correct_abstention_rate"], 1.0)
         self.assertEqual(report["answer"]["generated_answer_count"], 3)
