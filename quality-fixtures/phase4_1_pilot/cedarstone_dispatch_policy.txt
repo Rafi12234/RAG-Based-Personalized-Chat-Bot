@@ -1,0 +1,9 @@
+CEDARSTONE DISPATCH MANUAL — STANDARD EDITION (synthetic, evaluation-only)
+Published: 2026-06-11. Region: fictional Cedarstone operations.
+
+Route East same-day dispatch cutoff is 14:30 Asia/Dhaka. The cutoff refers to receipt of a complete shipping request, not vehicle departure.
+Route North same-day dispatch cutoff is 16:00 Asia/Dhaka under the standard edition.
+Route South same-day dispatch cutoff is 11:45 Asia/Dhaka.
+For a damaged shipment, personnel must upload a photograph within 72 hours after the damage was identified.
+A complete shipment missing the East cutoff becomes eligible for the next working day's dispatch queue. This document does not publish a support phone number.
+This is a fictional policy used only for testing evidence-grounded Q&A.
