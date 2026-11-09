@@ -7,6 +7,7 @@ import { HttpError } from "../lib/http.js";
 import type { AnswerResolutionCode } from "../lib/answerRuntime.js";
 import { evidenceSupportsAnswerTerms } from "../lib/evidenceConsistency.js";
 import { extractExplicitDuration } from "../lib/explicitDuration.js";
+import { extractBanglaDuration } from "../lib/explicitBanglaDuration.js";
 import { extractDirectPolicyFact } from "../lib/directPolicyFacts.js";
 import { infrastructureQuestionKind, resolveNamedInfrastructure } from "../lib/namedInfrastructure.js";
 import { resolveExplicitServiceActor } from "../lib/explicitServiceActor.js";
@@ -543,6 +544,19 @@ export async function generateGroundedAnswer(
       status: "answered",
       answer: `${duration.amount} ${duration.unit} [S${duration.sourceIndex + 1}].`,
       citations: [citationFor(selected[duration.sourceIndex], duration.sourceIndex)],
+    };
+  }
+  const banglaDuration = extractBanglaDuration(question, selected);
+  if (banglaDuration !== undefined) {
+    if (banglaDuration === null) {
+      onResolution?.("duration_insufficient");
+      return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+    }
+    onResolution?.("duration_fact");
+    return {
+      status: "answered",
+      answer: banglaDuration.text + " [S" + (banglaDuration.sourceIndex + 1) + "].",
+      citations: [citationFor(selected[banglaDuration.sourceIndex], banglaDuration.sourceIndex)],
     };
   }
   onResolution?.("model_path");
