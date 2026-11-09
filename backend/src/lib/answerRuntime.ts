@@ -3,7 +3,7 @@
  * cannot be mistaken for newly pulled source code.
  * Increment whenever the answer pipeline's externally visible behavior changes.
  */
-export const ANSWER_ENGINE_VERSION = "phase3.10-grounded-2026-11-04-r3" as const;
+export const ANSWER_ENGINE_VERSION = "phase3.10-grounded-2026-11-10-r4" as const;
 
 export type AnswerResolutionCode =
   | "no_verified_sources"
@@ -15,4 +15,6 @@ export type AnswerResolutionCode =
   | "direct_policy_insufficient"
   | "duration_fact"
   | "duration_insufficient"
-  | "model_path";
+  | "model_path"
+  | "multi_document_fact"
+  | "multi_document_insufficient";

@@ -9,6 +9,7 @@ import { evidenceSupportsAnswerTerms } from "../lib/evidenceConsistency.js";
 import { extractExplicitDuration } from "../lib/explicitDuration.js";
 import { extractBanglaDuration } from "../lib/explicitBanglaDuration.js";
 import { extractDirectPolicyFact } from "../lib/directPolicyFacts.js";
+import { extractMultiDocumentFact } from "../lib/explicitMultiDocumentFacts.js";
 import { infrastructureQuestionKind, resolveNamedInfrastructure } from "../lib/namedInfrastructure.js";
 import { resolveExplicitServiceActor } from "../lib/explicitServiceActor.js";
 import { resolveExplicitRelationalDatabase } from "../lib/explicitRelationalDatabase.js";
@@ -492,6 +493,21 @@ export async function generateGroundedAnswer(
     return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
   }
   const selected = sources.slice(0, MAX_SOURCES);
+  // A conjunctive question requires independent facts from both verified documents.
+  // Never let a single-source LLM response appear to satisfy both parts.
+  const paired = extractMultiDocumentFact(question, selected);
+  if (paired.state !== "not_applicable") {
+    if (paired.state !== "found") {
+      onResolution?.("multi_document_insufficient");
+      return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+    }
+    const citations = [paired.vectorSourceIndex, paired.retentionSourceIndex]
+      .sort((a, b) => a - b).map(index => citationFor(selected[index], index));
+    onResolution?.("multi_document_fact");
+    return { status: "answered",
+      answer: `${paired.vectorName} [S${paired.vectorSourceIndex + 1}] and ${paired.retentionText} [S${paired.retentionSourceIndex + 1}].`,
+      citations };
+  }
   const extracted = extractHttpStatusAnswer(question, selected)
     ?? extractRouteDispatchCutoffAnswer(question, selected);
   if (extracted) {
