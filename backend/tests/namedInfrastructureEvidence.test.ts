@@ -129,3 +129,23 @@ test("Phase 3 QA: actual repository fixture file bytes provide three supported f
     assert.deepEqual(result, {state:"found",sourceIndex:index,name:expected});
   }
 });
+
+
+test("Phase 4.1: original uploaded file formats have an explicit object-store relationship", () => {
+  const sentence = "The Riverbend document platform keeps original uploaded PDF, DOCX and TXT files in RustFS, an S3-compatible object store.";
+  assert.deepEqual(resolveNamedInfrastructure(
+    "Which object store preserves the original uploaded files?",
+    [source(sentence, "riverbend_platform.txt")]),
+    { state: "found", sourceIndex: 0, name: "RustFS" });
+});
+
+test("Phase 4.1: wrong relationship and negated file-store claim remain unanswerable", () => {
+  const q = "Which object store preserves the original uploaded files?";
+  for (const sentence of [
+    "Qdrant keeps document vectors, not uploaded files, in an index.",
+    "The Riverbend document platform does not keep original uploaded PDF and TXT files in RustFS, an S3-compatible object store.",
+    "The platform keeps original uploaded PDF files in RustFS. RustFS is an S3-compatible object store.",
+  ]) {
+    assert.notEqual(resolveNamedInfrastructure(q, [source(sentence)]).state, "found");
+  }
+});
