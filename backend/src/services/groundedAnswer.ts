@@ -10,6 +10,7 @@ import { extractExplicitDuration } from "../lib/explicitDuration.js";
 import { extractDirectPolicyFact } from "../lib/directPolicyFacts.js";
 import { infrastructureQuestionKind, resolveNamedInfrastructure } from "../lib/namedInfrastructure.js";
 import { resolveExplicitServiceActor } from "../lib/explicitServiceActor.js";
+import { resolveExplicitRelationalDatabase } from "../lib/explicitRelationalDatabase.js";
 import type { VerifiedSource } from "../lib/retrievalEligibility.js";
 
 const MAX_SOURCES = 5;
@@ -584,6 +585,15 @@ export async function generateGroundedAnswer(
       ?? extractEmbeddingDimensionAnswer(question, selected)
       ?? extractRouteDispatchCutoffAnswer(question, selected);
     if (fact) return fact;
+    const database = resolveExplicitRelationalDatabase(question, selected);
+    if (database.state === "found") {
+      onResolution?.("explicit_evidence");
+      return {
+        status: "answered",
+        answer: database.name + " [S" + (database.sourceIndex + 1) + "].",
+        citations: [citationFor(selected[database.sourceIndex], database.sourceIndex)],
+      };
+    }
     const service = resolveExplicitServiceActor(question, selected);
     if (service.state === "found") {
       onResolution?.("explicit_evidence");
