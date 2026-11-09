@@ -45,10 +45,19 @@ const VECTOR_PATTERNS = [
 // Resolve storage-location questions from explicit same-sentence relationships.
 // This does not infer a product's type from a product name or document title.
 const VECTOR_LOCATION_PATTERNS = [
+  // "DocMind-AI stores document embeddings in Qdrant, a vector database."
+  // The named storage target, NOT the application doing the storing, wins.
+  ...VECTOR_PATTERNS,
+  // "DocMind-AI stores document embeddings in Qdrant."
+  new RegExp(String.raw`\b(?:stores?|keeps?|holds?)\s+(?:the\s+)?` +
+    String.raw`(?:(?:platform'?s|system'?s|document|source|text|embedding|dense|semantic|multilingual|[1-9]\d{0,4}[- ]dimensional)\s+){0,8}` +
+    String.raw`(?:embeddings?|vectors?)\s+(?:in|on)\s+` + NAME + String.raw`\b`, "giu"),
+  // "Qdrant stores the platform's 384-dimensional document embedding vectors."
+  // Reject a subject-level match when an explicit "in OtherStore" follows.
   new RegExp(String.raw`\b` + NAME +
     String.raw`\s+(?:stores?|keeps?|holds?)\s+(?:the\s+)?` +
     String.raw`(?:(?:platform'?s|system'?s|document|source|text|embedding|dense|semantic|multilingual|[1-9]\d{0,4}[- ]dimensional)\s+){0,8}` +
-    String.raw`(?:embeddings?|vectors?)\b`, "giu"),
+    String.raw`(?:embeddings?|vectors?)\b(?!\s+(?:in|on|using)\s+[A-Za-z])`, "giu"),
   new RegExp(String.raw`\b(?:the\s+)?` +
     String.raw`(?:(?:platform'?s|system'?s|document|source|text|embedding|dense|semantic|multilingual|[1-9]\d{0,4}[- ]dimensional)\s+){0,8}` +
     String.raw`(?:embeddings?|vectors?)\s+(?:are\s+)?(?:stored|kept|held)\s+(?:in|on)\s+` + NAME + String.raw`\b`, "giu"),
@@ -73,6 +82,9 @@ const STORE_PATTERNS = [
 /** Avoid false positive from negated claims. */
 function isNegated(sentence: string, start: number): boolean {
   const prior = sentence.slice(Math.max(0, start - 80), start);
+  const current = sentence.slice(start, start + 40);
+  // Avoid treating the word "not" or "never" as a named storage system.
+  if (/^(?:not|never)\s+(?:stores?|keeps?|holds?)\b/iu.test(current)) return true;
   return /\b(?:not|never|does\s+not|is\s+not|are\s+not)\b[^.!?।]{0,36}$/iu.test(prior);
 }
 
