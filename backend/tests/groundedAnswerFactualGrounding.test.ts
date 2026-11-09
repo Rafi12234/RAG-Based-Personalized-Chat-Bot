@@ -68,7 +68,7 @@ test("factual: unrelated answer cannot borrow real quote", () => {
 });
 test("factual: unnecessary model abstention retries once with focused evidence", async () => {
   let calls = 0;
-  const result = await generateGroundedAnswer("Where are DocMind-AI document embeddings stored?", [vectors], async prompt => {
+  const result = await generateGroundedAnswer("Which system contains DocMind-AI document embeddings?", [vectors], async prompt => {
     calls++;
     if (calls === 1) return abstain;
     assert.match(prompt, /SOURCE FACTS/);
