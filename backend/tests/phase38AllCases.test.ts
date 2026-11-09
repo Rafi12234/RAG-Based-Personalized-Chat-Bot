@@ -141,7 +141,7 @@ test("Phase4.1: metadata retention cannot be confused with attachment retention"
     "90 days",
   );
   assert.equal(
-    extractDirectPolicyFact("How long does Aurora keep resolved ticket attachments?", [aurora])?.text,
+    extractDirectPolicyFact("How long are resolved ticket attachments retained?", [aurora])?.text,
     "30 days",
   );
 });
