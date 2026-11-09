@@ -8,7 +8,7 @@
  */
 import type { VerifiedSource } from "./retrievalEligibility.js";
 
-export type InfrastructureKind = "vector_database" | "object_store";
+export type InfrastructureKind = "vector_database" | "vector_location" | "object_store";
 export type NamedInfrastructureResult =
   | Readonly<{ state: "not_applicable" }>
   | Readonly<{ state: "missing" }>
@@ -16,14 +16,19 @@ export type NamedInfrastructureResult =
   | Readonly<{ state: "found"; sourceIndex: number; name: string }>;
 
 export function infrastructureQuestionKind(question: string): InfrastructureKind | null {
-  const asksName = /\b(?:which|what)\b|কোন/iu.test(question);
+  const asksName = /\b(?:which|what|where)\b|কোন|কোথায়|কোথায়/iu.test(question);
   if (!asksName) return null;
   const vector = /\bvector\s+database\b|ভেক্টর\s*ডাটাবেস/iu.test(question) &&
     /\bembeddings?\b|এমবেডিং|এম্বেডিং/iu.test(question);
+  // A location question requires a verified vector-storage relationship;
+  // it need not literally say "vector database".
+  const location = /\bwhere\b|কোথায়|কোথায়/iu.test(question) &&
+    /\b(?:vectors?|embeddings?)\b|ভেক্টর|এমবেডিং|এম্বেডিং/iu.test(question) &&
+    /\b(?:stor(?:ed|e)|kept|held)\b|রাখা|সংরক্ষিত|থাকে/iu.test(question);
   const store = /\bobject\s+store\b|\bstorage\b|স্টোরেজ/iu.test(question) &&
     /\b(?:upload(?:ed)?|original|source|document(?:s)?|file(?:s)?)\b|আপলোড|মূল|ফাইল/iu.test(question);
-  if (vector === store) return null;
-  return vector ? "vector_database" : "object_store";
+  if (Number(vector) + Number(location) + Number(store) !== 1) return null;
+  return vector ? "vector_database" : location ? "vector_location" : "object_store";
 }
 
 const NAME = String.raw`([A-Za-z][A-Za-z0-9_-]{1,39})`;
@@ -37,6 +42,18 @@ const VECTOR_PATTERNS = [
     String.raw`\s+(?:is|was)\s+(?:an?\s+|the\s+)?` + QUALIFIER +
     String.raw`vector\s+database\s+(?:that|which)\s+(?:stores?|keeps?)\s+(?:document\s+|text\s+)?embeddings?\b`, "giu"),
 ];
+// Resolve storage-location questions from explicit same-sentence relationships.
+// This does not infer a product's type from a product name or document title.
+const VECTOR_LOCATION_PATTERNS = [
+  new RegExp(String.raw`\b` + NAME +
+    String.raw`\s+(?:stores?|keeps?|holds?)\s+(?:the\s+)?` +
+    String.raw`(?:(?:platform'?s|system'?s|document|source|text|embedding|dense|semantic|multilingual|[1-9]\d{0,4}[- ]dimensional)\s+){0,8}` +
+    String.raw`(?:embeddings?|vectors?)\b`, "giu"),
+  new RegExp(String.raw`\b(?:the\s+)?` +
+    String.raw`(?:(?:platform'?s|system'?s|document|source|text|embedding|dense|semantic|multilingual|[1-9]\d{0,4}[- ]dimensional)\s+){0,8}` +
+    String.raw`(?:embeddings?|vectors?)\s+(?:are\s+)?(?:stored|kept|held)\s+(?:in|on)\s+` + NAME + String.raw`\b`, "giu"),
+];
+
 const STORE_PATTERNS = [
   // "The document platform keeps original uploaded PDF, DOCX and TXT files
   //  in RustFS, an S3-compatible object store."
@@ -75,10 +92,16 @@ export function resolveNamedInfrastructure(
 ): NamedInfrastructureResult {
   const kind = infrastructureQuestionKind(question);
   if (!kind) return { state: "not_applicable" };
-  const expressions = kind === "vector_database" ? VECTOR_PATTERNS : STORE_PATTERNS;
+  const expressions = kind === "vector_database" ? VECTOR_PATTERNS
+    : kind === "vector_location" ? VECTOR_LOCATION_PATTERNS : STORE_PATTERNS;
+  // A specific dimension in the question must appear in the same fact.
+  const dimension = kind === "vector_location"
+    ? /\b([1-9]\d{0,4})[- ]dimensional\b/iu.exec(question)?.[1] : undefined;
   const candidates: Array<{ sourceIndex: number; name: string }> = [];
   for (const [sourceIndex, source] of sources.entries()) {
     for (const sentence of sourceSentences(source)) {
+      if (dimension && !sentence.includes(dimension + "-dimensional") &&
+          !sentence.includes(dimension + " dimensional")) continue;
       for (const expression of expressions) {
         for (const match of sentence.matchAll(expression)) {
           if (isNegated(sentence, match.index ?? 0)) continue;
