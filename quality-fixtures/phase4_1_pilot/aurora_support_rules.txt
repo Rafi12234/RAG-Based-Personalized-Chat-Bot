@@ -1,0 +1,9 @@
+AURORA HELPDESK — SUPPORT AND RETENTION POLICY (synthetic, evaluation-only)
+Document owner: Customer Experience.
+
+Aurora staff acknowledge a newly submitted support ticket within one business day.
+Resolved ticket attachments are retained for 30 days after resolution; they are then removed.
+Resolved ticket metadata is retained for 90 days after resolution. Metadata and attachments have distinct retention periods.
+Escalation to a human supervisor occurs after two unsuccessful contact attempts on separate business days.
+The public-facing helpdesk does not publish a telephone number. Administrative passwords and recovery codes are never included in this handbook.
+This is fictional data created for QA exercises.
