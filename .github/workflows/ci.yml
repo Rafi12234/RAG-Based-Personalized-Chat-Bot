@@ -67,6 +67,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Check React app
         run: cd frontend && npm ci && npm run lint && npm run build
+      - name: Validate frozen Phase 4.1 holdout harness
+        run: |
+          node --check tools/PHASE4_1_HOLDOUT_READ_ONLY.js
+          node -e 'const m=require("./quality-fixtures/phase4_1_question_holdout_v1.json"); if(m.cases.length!==12 || new Set(m.cases.map(c=>c.id)).size!==12 || m.cases.some(c=>!["answered","insufficient_evidence"].includes(c.expectedStatus))) process.exit(1)'
 
   python:
     runs-on: ubuntu-latest
