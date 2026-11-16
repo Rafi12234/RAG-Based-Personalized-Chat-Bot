@@ -10,6 +10,7 @@ import { extractExplicitDuration } from "../lib/explicitDuration.js";
 import { extractBanglaDuration } from "../lib/explicitBanglaDuration.js";
 import { extractDirectPolicyFact } from "../lib/directPolicyFacts.js";
 import { extractMultiDocumentFact } from "../lib/explicitMultiDocumentFacts.js";
+import { resolveVerifiedFacts } from "../lib/verifiedEvidenceFacts.js";
 import { infrastructureQuestionKind, resolveNamedInfrastructure } from "../lib/namedInfrastructure.js";
 import { resolveExplicitServiceActor } from "../lib/explicitServiceActor.js";
 import { resolveExplicitRelationalDatabase } from "../lib/explicitRelationalDatabase.js";
@@ -508,6 +509,27 @@ export async function generateGroundedAnswer(
       answer: `${paired.firstFact} [S${paired.firstSourceIndex + 1}] and ${paired.secondFact} [S${paired.secondSourceIndex + 1}].`,
       citations };
   }
+  // Run supported multi-fact extraction before any single-fact shortcut.
+  const verified = resolveVerifiedFacts(question, selected);
+  const verifiedResponse = (): GroundedAnswer | null => {
+    if (verified.state === "not_applicable") return null;
+    if (verified.state === "insufficient") {
+      onResolution?.("verified_fact_insufficient");
+      return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+    }
+    const indices = [...new Set(verified.parts.map(part => part.sourceIndex))].sort((a, b) => a - b);
+    const citations = indices.map(index => citationFor(selected[index], index));
+    onResolution?.("verified_fact");
+    return { status: "answered",
+      answer: verified.parts.map(part => part.value + " [S" + (part.sourceIndex + 1) + "]").join(" and ") + ".",
+      citations,
+    };
+  };
+  if (verified.state === "found" && verified.parts.length > 1) return verifiedResponse()!;
+  if (verified.state === "insufficient" && /\b(?:and|respectively)\b|আর/u.test(question)) {
+    // Recognized multi-part intent must never degrade to an incomplete answer.
+    return verifiedResponse()!;
+  }
   const extracted = extractHttpStatusAnswer(question, selected)
     ?? extractRouteDispatchCutoffAnswer(question, selected);
   if (extracted) {
@@ -534,13 +556,13 @@ export async function generateGroundedAnswer(
     if (process.env.DOCMIND_ANSWER_DIAGNOSTICS === "1") {
       console.error("DocMind answer diagnostic: " + reason);
     }
-    return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+    return verifiedResponse() ?? { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
   }
   const direct = extractDirectPolicyFact(question, selected);
   if (direct !== undefined) {
     if (direct === null) {
       onResolution?.("direct_policy_insufficient");
-      return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+      return verifiedResponse() ?? { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
     }
     onResolution?.("direct_policy");
     return {
@@ -553,7 +575,7 @@ export async function generateGroundedAnswer(
   if (duration !== undefined) {
     if (duration === null) {
       onResolution?.("duration_insufficient");
-      return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+      return verifiedResponse() ?? { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
     }
     onResolution?.("duration_fact");
     return {
@@ -566,7 +588,7 @@ export async function generateGroundedAnswer(
   if (banglaDuration !== undefined) {
     if (banglaDuration === null) {
       onResolution?.("duration_insufficient");
-      return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
+      return verifiedResponse() ?? { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
     }
     onResolution?.("duration_fact");
     return {
@@ -575,6 +597,8 @@ export async function generateGroundedAnswer(
       citations: [citationFor(selected[banglaDuration.sourceIndex], banglaDuration.sourceIndex)],
     };
   }
+  const explicitAnswer = verifiedResponse();
+  if (explicitAnswer) return explicitAnswer;
   onResolution?.("model_path");
   const prompt = buildEvidencePrompt(question, selected);
   const raw = await provider(prompt);
