@@ -5,8 +5,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from .document_structure import SourceBlock
-from .hierarchical_index import HierarchyManifestBuilder, iter_hierarchical_passages
+from .document_structure import SourceBlock, PdfPageStructure
+from .hierarchical_index import HierarchyManifestBuilder, iter_manifested_pdf_passages
 from .hierarchical_shadow import (
     SHADOW_COLLECTION, KEYWORD_FIELDS, SHADOW_SCHEMA,
     inspect_shadow_collection, initialize_shadow_collection,
@@ -101,12 +101,13 @@ class ShadowTests(unittest.TestCase):
         self.identity=IndexIdentity("org","kb","doc","ver","job","book.pdf")
 
     def make(self):
-        blocks=(SourceBlock(f"block-{i}","ver",0,f"Fact {i}: value {i+1000}",
-                            "pdf_text",i,None,(),f"pdf:p{i:05d}:b00000")
-                for i in range(1,6))
-        passages=list(iter_hierarchical_passages(blocks,Tokenizer()))
-        manifest_builder=HierarchyManifestBuilder("ver","a"*64)
-        for passage in passages: manifest_builder.add_passage(passage)
+        pages=(PdfPageStructure(i,(
+                    SourceBlock(f"block-{i}","ver",0,f"Fact {i}: value {i+1000}",
+                                "pdf_text",i,None,(),f"pdf:p{i:05d}:b00000"),),
+                False,False) for i in range(1,6))
+        manifest_builder=HierarchyManifestBuilder("ver","a"*64,expected_pages=5)
+        passages=list(iter_manifested_pdf_passages(
+            pages,manifest_builder,Tokenizer()))
         return passages,manifest_builder.finalize()
 
     def test_preview_does_not_create_index(self):
