@@ -512,8 +512,8 @@ export async function generateGroundedAnswer(
   // Run supported multi-fact extraction before any single-fact shortcut.
   const verified = resolveVerifiedFacts(question, selected);
   const verifiedResponse = (): GroundedAnswer | null => {
-    if (verified.state === "not_applicable") return null;
-    if (verified.state === "insufficient") {
+    if (verified.state !== "found") {
+      if (verified.state === "not_applicable") return null;
       onResolution?.("verified_fact_insufficient");
       return { status: "insufficient_evidence", answer: UNKNOWN_ANSWER, citations: [] };
     }
