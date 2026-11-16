@@ -7,6 +7,9 @@ import { authRouter } from "./routes/auth.js";
 import { organizationsRouter } from "./routes/organizations.js";
 import { knowledgeBasesRouter } from "./routes/knowledgeBases.js";
 import { documentsRouter, knowledgeBaseDocumentsRouter } from "./routes/documents.js";
+import { retrievalRouter } from "./routes/retrieval.js";
+import { requireAuth } from "./middleware/auth.js";
+import { ANSWER_ENGINE_VERSION } from "./lib/answerRuntime.js";
 import { notFound, errorHandler, HttpError } from "./lib/http.js";
 
 const app = express();
@@ -38,10 +41,18 @@ app.get("/api/v1/health/database", async (_req, res) => {
   }
 });
 
+// Authenticated, read-only build-parity check for the frontend.
+// Intentionally does not expose model prompts, document snippets or secrets.
+app.get("/api/v1/answer-engine", requireAuth, (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, engineVersion: ANSWER_ENGINE_VERSION });
+});
+
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/organizations", organizationsRouter);
 app.use("/api/v1/knowledge-bases", knowledgeBasesRouter);
 app.use("/api/v1/knowledge-bases", knowledgeBaseDocumentsRouter);
+app.use("/api/v1/knowledge-bases", retrievalRouter);
 app.use("/api/v1/documents", documentsRouter);
 app.use(notFound);
 app.use(errorHandler);

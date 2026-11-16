@@ -1,0 +1,17 @@
+Harborlight Transit — Dispatch Operations Policy
+SYNTHETIC PHASE 3.8 TEST DATA — NOT REAL OPERATING INSTRUCTIONS
+
+Section 1. Scope and locations
+Harborlight Transit uses two fictional delivery routes named North and East. The scheduling clock for every cutoff below is Asia/Dhaka local time. Weekend deliveries are not promised; this text describes the weekday dispatch workflow only. The depot keeps a scan record for each parcel and associates the scan with a route identifier rather than using the parcel's street name to guess its destination.
+
+Section 2. Same-day dispatch
+The Route North same-day dispatch cutoff is 16:00 Asia/Dhaka on business days. A Route North parcel scanned after 16:00 is queued for the next business day, not for an unscheduled evening truck. The Route East same-day dispatch cutoff is 14:30 Asia/Dhaka on business days. A Route East parcel scanned at 14:45 is queued for the next business day. These two route cutoffs are intentionally different, and the East cutoff cannot be used to answer a North-specific question.
+
+Section 3. Exceptions and evidence
+When a parcel is visibly damaged, staff must upload a photograph to the incident ticket within 72 hours of the damage being identified. The incident ticket must reference the parcel scan ID. Only the operations supervisor can mark a damaged parcel as ready for redispatch after the ticket is reviewed. A standard parcel requires no incident ticket unless damage or loss is reported.
+
+Section 4. Refund and notification details
+A customer whose shipment is cancelled before dispatch may request a refund through the ticket portal. A refund is processed within five business days after the refund request is approved, not within five hours of the initial request. No refund is promised for a delivery delay alone. Staff should not invent phone numbers or email addresses when the customer record lacks that information.
+
+Section 5. Interpretation of this fixture
+This is a fictional document deliberately long enough to exercise paragraph boundaries and multi-section retrieval. It does not define a company website, a real dispatch address, an emergency telephone number, a bank account, or credentials. This fixture must be uploaded only into a dedicated Phase 3.8 QA knowledge base, never into the original Phase 2 pilot knowledge base.

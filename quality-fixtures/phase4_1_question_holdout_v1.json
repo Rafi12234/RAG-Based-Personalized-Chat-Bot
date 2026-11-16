@@ -1,0 +1,168 @@
+{
+  "dataset_kind": "synthetic_question_holdout",
+  "version": 1,
+  "status": "frozen_prior_to_first_execution",
+  "scope": "Same six synthetic documents; novel questions only, NOT independent documents or real-world evaluation",
+  "goal": "Measure paraphrase, unsupported-claim, multi-document and answer grounding quality without changing the engine",
+  "kb_name": "DocMind Phase4.1 RAG Benchmark - Disposable",
+  "engine_version": "phase4.1-grounded-2026-11-16-r6",
+  "notes": [
+    "Only existing disposable six-document KB; no upload, reindex, mutation or cross-tenant access",
+    "Lexical/status/citation checks are heuristic; passing is not proof of semantic entailment",
+    "Do not tune the model to this holdout and then call the same cases independent"
+  ],
+  "cases": [
+    {
+      "id": "h01-embedding-model",
+      "language": "en",
+      "category": "single_document",
+      "question": "Which model does Riverbend apply to both document chunks and user questions?",
+      "expectedStatus": "answered",
+      "expectedSources": [
+        "riverbend_platform.txt"
+      ],
+      "answerPatterns": [
+        "\\b(?:multilingual\\s+)?e5\\b"
+      ]
+    },
+    {
+      "id": "h02-store-not-vectors",
+      "language": "en",
+      "category": "single_document",
+      "question": "Does Riverbend keep its dense embedding vectors inside RustFS?",
+      "expectedStatus": "answered",
+      "expectedSources": [
+        "riverbend_platform.txt"
+      ],
+      "answerPatterns": [
+        "\\b(?:no|not|doesn.t|never)\\b"
+      ]
+    },
+    {
+      "id": "h03-cutoff-meaning",
+      "language": "en",
+      "category": "single_document",
+      "question": "For Cedarstone Route East, what event does the dispatch cutoff time actually refer to?",
+      "expectedStatus": "answered",
+      "expectedSources": [
+        "cedarstone_dispatch_policy.txt"
+      ],
+      "answerPatterns": [
+        "(?:receipt|receiv|complete shipping request|completed shipping request)"
+      ]
+    },
+    {
+      "id": "h04-bulletin-proposal",
+      "language": "en",
+      "category": "single_document",
+      "question": "Which cutoff time does Cedarstone's unapproved North bulletin propose?",
+      "expectedStatus": "answered",
+      "expectedSources": [
+        "cedarstone_north_revision.txt"
+      ],
+      "answerPatterns": [
+        "15\\s*:\\s*00"
+      ]
+    },
+    {
+      "id": "h05-escalation-attempts",
+      "language": "en",
+      "category": "numeric_temporal",
+      "question": "After how many unsuccessful contact attempts on separate business days does Aurora escalate to a human supervisor?",
+      "expectedStatus": "answered",
+      "expectedSources": [
+        "aurora_support_rules.txt"
+      ],
+      "answerPatterns": [
+        "\\b(?:two|2)\\b"
+      ]
+    },
+    {
+      "id": "h06-return-label-trigger",
+      "language": "en",
+      "category": "single_document",
+      "question": "What acknowledgement starts Harbor's return-label issuance window?",
+      "expectedStatus": "answered",
+      "expectedSources": [
+        "harbor_finance_rules.txt"
+      ],
+      "answerPatterns": [
+        "(?:manager|valid\\s+return|acknowledg)"
+      ]
+    },
+    {
+      "id": "h07-shapla-working-days",
+      "language": "en",
+      "category": "multilingual",
+      "question": "Once a Shapla return request is approved, how many working days does the policy allow to notify the customer?",
+      "expectedStatus": "answered",
+      "expectedSources": [
+        "shapla_bangla_policy.txt"
+      ],
+      "answerPatterns": [
+        "(?:three|3|তিন)\\s*(?:working|business|কর্মদিবস)"
+      ]
+    },
+    {
+      "id": "h08-two-doc-model-retention",
+      "language": "en",
+      "category": "multi_document",
+      "question": "Name the embedding model used by Riverbend and the retention time for Aurora ticket metadata.",
+      "expectedStatus": "answered",
+      "expectedSources": [
+        "riverbend_platform.txt",
+        "aurora_support_rules.txt"
+      ],
+      "answerPatterns": [
+        "\\b(?:multilingual\\s+)?e5\\b",
+        "90\\s*(?:days?|দিন)"
+      ],
+      "claimSources": [
+        {
+          "pattern": "\\be5\\b",
+          "file": "riverbend_platform.txt"
+        },
+        {
+          "pattern": "90\\s*days?",
+          "file": "aurora_support_rules.txt"
+        }
+      ]
+    },
+    {
+      "id": "h09-unknown-vehicle-departure",
+      "language": "en",
+      "category": "unanswerable",
+      "question": "When does Cedarstone Route South's delivery vehicle physically depart?",
+      "expectedStatus": "insufficient_evidence",
+      "expectedSources": [],
+      "answerPatterns": []
+    },
+    {
+      "id": "h10-unknown-support-email",
+      "language": "en",
+      "category": "unanswerable",
+      "question": "What publicly listed email address can Aurora support be reached at?",
+      "expectedStatus": "insufficient_evidence",
+      "expectedSources": [],
+      "answerPatterns": []
+    },
+    {
+      "id": "h11-cross-policy-refund",
+      "language": "en",
+      "category": "cross_entity",
+      "question": "How long does Cedarstone take to process a refund after manager approval?",
+      "expectedStatus": "insufficient_evidence",
+      "expectedSources": [],
+      "answerPatterns": []
+    },
+    {
+      "id": "h12-north-definitive-conflict",
+      "language": "en",
+      "category": "conflict",
+      "question": "Taking both Cedarstone North documents into account, what single authoritative same-day cutoff should be applied?",
+      "expectedStatus": "insufficient_evidence",
+      "expectedSources": [],
+      "answerPatterns": []
+    }
+  ]
+}

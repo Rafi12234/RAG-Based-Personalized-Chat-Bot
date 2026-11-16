@@ -1,0 +1,9 @@
+HARBOR FINANCE — REFUNDS AND INVOICES (synthetic, evaluation-only)
+Policy date: 2026-05-03.
+
+A customer-approved refund enters processing only AFTER a refund manager approves the request. The processing period is five business days measured from approval, not from initial submission.
+Customers may request invoice corrections within seven business days of receiving the invoice.
+A return label is issued within two business days after the refund manager acknowledges a valid return.
+Standard bulk orders above 80 items have an administration surcharge of 12 percent, calculated on the pre-tax subtotal.
+None of the rules above establish the current foreign exchange rate, bank account number, or public support telephone number.
+This fictional policy is meant for RAG source verification.

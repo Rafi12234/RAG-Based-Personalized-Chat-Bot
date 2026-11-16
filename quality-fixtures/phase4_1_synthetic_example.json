@@ -1,0 +1,151 @@
+{
+  "dataset_kind": "synthetic_smoke",
+  "cases": [
+    {
+      "case_id": "en-vectors",
+      "question": "Which vector database stores embeddings?",
+      "language": "english",
+      "category": "single_document",
+      "split": "development",
+      "gold_document_ids": [
+        "doc-vectors"
+      ],
+      "expected_status": "answered",
+      "retrieved": [
+        {
+          "document_id": "doc-vectors",
+          "score": 0.91
+        },
+        {
+          "document_id": "doc-storage",
+          "score": 0.62
+        }
+      ],
+      "observed": {
+        "status": "answered",
+        "factual_correct": true,
+        "citations": [
+          {
+            "document_id": "doc-vectors",
+            "supports_claim": true
+          }
+        ],
+        "latency_ms": 520
+      }
+    },
+    {
+      "case_id": "bn-storage",
+      "question": "মূল ফাইলগুলো কোন স্টোরেজে রাখা হয়?",
+      "language": "bangla",
+      "category": "single_document",
+      "split": "development",
+      "gold_document_ids": [
+        "doc-storage"
+      ],
+      "expected_status": "answered",
+      "retrieved": [
+        {
+          "document_id": "doc-vectors",
+          "score": 0.86
+        },
+        {
+          "document_id": "doc-storage",
+          "score": 0.77
+        }
+      ],
+      "observed": {
+        "status": "answered",
+        "factual_correct": true,
+        "citations": [
+          {
+            "document_id": "doc-storage",
+            "supports_claim": true
+          }
+        ],
+        "latency_ms": 730
+      }
+    },
+    {
+      "case_id": "mixed-unknown",
+      "question": "Unknown support hotline নম্বর কী?",
+      "language": "mixed",
+      "category": "unanswerable",
+      "split": "holdout",
+      "gold_document_ids": [],
+      "expected_status": "insufficient_evidence",
+      "retrieved": [
+        {
+          "document_id": "doc-storage",
+          "score": 0.63
+        }
+      ],
+      "observed": {
+        "status": "insufficient_evidence",
+        "factual_correct": null,
+        "citations": [],
+        "latency_ms": 680
+      }
+    },
+    {
+      "case_id": "en-conflict",
+      "question": "Is the cutoff at 15:00 or 16:00?",
+      "language": "english",
+      "category": "conflict",
+      "split": "holdout",
+      "gold_document_ids": [
+        "doc-policy-a",
+        "doc-policy-b"
+      ],
+      "expected_status": "insufficient_evidence",
+      "retrieved": [
+        {
+          "document_id": "doc-policy-a",
+          "score": 0.88
+        },
+        {
+          "document_id": "doc-policy-b",
+          "score": 0.84
+        }
+      ],
+      "observed": {
+        "status": "insufficient_evidence",
+        "factual_correct": null,
+        "citations": [],
+        "latency_ms": 610
+      }
+    },
+    {
+      "case_id": "mixed-poor-citation",
+      "question": "Refund start কখন?",
+      "language": "mixed",
+      "category": "multi_document",
+      "split": "development",
+      "gold_document_ids": [
+        "doc-refund",
+        "doc-approval"
+      ],
+      "expected_status": "answered",
+      "retrieved": [
+        {
+          "document_id": "doc-refund",
+          "score": 0.9
+        },
+        {
+          "document_id": "doc-approval",
+          "score": 0.87
+        }
+      ],
+      "observed": {
+        "status": "answered",
+        "factual_correct": true,
+        "citations": [
+          {
+            "document_id": "doc-storage",
+            "supports_claim": false
+          }
+        ],
+        "latency_ms": 980
+      }
+    }
+  ]
+}

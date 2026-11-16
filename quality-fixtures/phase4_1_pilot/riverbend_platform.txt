@@ -1,0 +1,10 @@
+RIVERBEND PLATFORM — ARCHITECTURE REFERENCE (synthetic, evaluation-only)
+Release: RBP-2026-07. Owner: Platform Engineering.
+
+The Riverbend document platform keeps original uploaded PDF, DOCX and TXT files in RustFS, an S3-compatible object store. RustFS holds original file bytes; it does not store dense embedding vectors.
+Qdrant stores the platform's 384-dimensional document embedding vectors and their chunk metadata. The system uses multilingual E5 to embed both source chunks and user questions.
+MySQL stores account memberships, knowledge bases, document-version status, and the database record of ingestion jobs.
+Redis transports ingestion task messages between the API dispatcher and Celery workers; Redis does not contain authoritative document versions.
+Cross-workspace document access is rejected with HTTP 404 when a requesting user lacks membership. No customer may retrieve evidence from another organization's private knowledge base.
+The vector index must expose only READY document versions and no archived document versions.
+This is a fictional platform; values are intentionally synthetic and are not operational instructions.

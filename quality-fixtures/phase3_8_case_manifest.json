@@ -1,0 +1,92 @@
+{
+  "phase": "3.8",
+  "kind": "synthetic_document_grounding_pilot",
+  "isolation": "Dedicated new Phase 3.8 QA knowledge base only; never upload to original Phase 2 pilot KB",
+  "documents": [
+    "phase3_8_dispatch_policy.txt",
+    "phase3_8_dispatch_counterstatement.txt",
+    "phase3_8_support_handbook.txt"
+  ],
+  "cases": [
+    {
+      "id": "east-cutoff",
+      "question": "What is the Route East same-day dispatch cutoff?",
+      "expect": "14:30 Asia/Dhaka",
+      "document": "phase3_8_dispatch_policy.txt",
+      "category": "supported_exact"
+    },
+    {
+      "id": "north-conflict",
+      "question": "What is the Route North same-day dispatch cutoff?",
+      "expect": "ambiguous due to 16:00 versus 15:00; should not claim a unique cutoff",
+      "documents": [
+        "phase3_8_dispatch_policy.txt",
+        "phase3_8_dispatch_counterstatement.txt"
+      ],
+      "category": "conflicting_evidence",
+      "require_both_retrieved": true
+    },
+    {
+      "id": "damage-window",
+      "question": "How many hours after damage is identified must staff upload a photograph?",
+      "expect": "72 hours",
+      "document": "phase3_8_dispatch_policy.txt",
+      "category": "long_document"
+    },
+    {
+      "id": "refund-approval",
+      "question": "When does the five-business-day refund processing period start?",
+      "expect": "after refund request approval",
+      "document": "phase3_8_dispatch_policy.txt",
+      "category": "temporal_scope"
+    },
+    {
+      "id": "support-ack",
+      "question": "How soon should Cedarstone acknowledge a new ticket?",
+      "expect": "within one business day",
+      "document": "phase3_8_support_handbook.txt",
+      "category": "paraphrase"
+    },
+    {
+      "id": "support-phone",
+      "question": "What is Cedarstone's public support telephone number?",
+      "expect": "insufficient_evidence",
+      "document": "phase3_8_support_handbook.txt",
+      "category": "unsupported"
+    },
+    {
+      "id": "attachments-retention",
+      "question": "How long are resolved ticket attachments retained?",
+      "expect": "30 days",
+      "document": "phase3_8_support_handbook.txt",
+      "category": "object_specific"
+    },
+    {
+      "id": "ticket-metadata-retention",
+      "question": "How long is resolved ticket metadata retained?",
+      "expect": "90 days",
+      "document": "phase3_8_support_handbook.txt",
+      "category": "object_specific"
+    },
+    {
+      "id": "invoice-correction",
+      "question": "How many business days after receiving the invoice can a customer request a correction?",
+      "expect": "seven business days",
+      "document": "phase3_8_support_handbook.txt",
+      "category": "paraphrase"
+    },
+    {
+      "id": "support-login-secret",
+      "question": "What is the administrator password for Cedarstone Helpdesk?",
+      "expect": "insufficient_evidence",
+      "document": "phase3_8_support_handbook.txt",
+      "category": "unsupported"
+    }
+  ],
+  "limitations": [
+    "Expected factual value must be separately verified against retrieved excerpt before marking a case passed.",
+    "An ambiguity test requires both conflicting source passages to be retrieved; absence of one source is not a valid conflict test.",
+    "No generated answer is judged as entailed solely because it contains a real citation.",
+    "No data upload, indexing, or KB creation happens through this manifest."
+  ]
+}

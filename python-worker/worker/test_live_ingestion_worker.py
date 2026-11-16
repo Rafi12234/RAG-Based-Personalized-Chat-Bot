@@ -27,6 +27,121 @@ class PilotSafetyTests(unittest.TestCase):
         with patch.dict(os.environ, {worker.PILOT_FLAG: worker.PILOT_VALUE}):
             with self.assertRaises(ValueError): worker.run_pilot_ingestion("x", max_ocr_pages=11)
 
+    def test_large_book_budget_requires_explicit_opt_in_and_private_cache(self):
+        env = {worker.PILOT_FLAG: worker.PILOT_VALUE,
+               worker.LARGE_BOOK_FLAG: "", worker.LARGE_BOOK_CACHE_ENV: ""}
+        with patch.dict(os.environ, env):
+            with self.assertRaises(ValueError):
+                worker.run_pilot_ingestion("test-job", max_ocr_pages=12)
+        env[worker.LARGE_BOOK_FLAG] = worker.LARGE_BOOK_VALUE
+        with patch.dict(os.environ, env):
+            with self.assertRaisesRegex(ValueError, "private checkpoint"):
+                worker.run_pilot_ingestion("test-job", max_ocr_pages=12)
+        env[worker.LARGE_BOOK_CACHE_ENV] = "/tmp/private-docmind-largebook"
+        with patch.dict(os.environ, env):
+            with patch.object(worker, "_inspect_prerequisites",
+                              side_effect=RuntimeError("preflight-only")) as inspect:
+                with self.assertRaisesRegex(RuntimeError, "preflight-only"):
+                    worker.run_pilot_ingestion("test-job", max_ocr_pages=12)
+                inspect.assert_called_once_with("test-job")
+
+    def test_encrypted_remote_mode_requires_two_flags_and_valid_key(self):
+        import base64
+        env = {
+            worker.PILOT_FLAG: worker.PILOT_VALUE,
+            worker.LARGE_BOOK_FLAG: "",
+            worker.REMOTE_CHECKPOINT_FLAG: worker.REMOTE_CHECKPOINT_VALUE,
+            worker.REMOTE_CHECKPOINT_KEY_ENV: base64.b64encode(b"k" * 32).decode(),
+            worker.LARGE_BOOK_CACHE_ENV: "",
+        }
+        with patch.dict(os.environ, env):
+            with self.assertRaisesRegex(ValueError, "large-book opt-in"):
+                worker.run_pilot_ingestion("test-job", max_ocr_pages=1)
+        env[worker.LARGE_BOOK_FLAG] = worker.LARGE_BOOK_VALUE
+        env[worker.REMOTE_CHECKPOINT_KEY_ENV] = ""
+        with patch.dict(os.environ, env):
+            with self.assertRaisesRegex(ValueError, "key"):
+                worker.run_pilot_ingestion("test-job", max_ocr_pages=1)
+        env[worker.REMOTE_CHECKPOINT_KEY_ENV] = base64.b64encode(b"k" * 32).decode()
+        with patch.dict(os.environ, env):
+            with patch.object(worker, "_inspect_prerequisites",
+                              side_effect=RuntimeError("preflight-only")) as inspect:
+                with self.assertRaisesRegex(RuntimeError, "preflight-only"):
+                    worker.run_pilot_ingestion("test-job", max_ocr_pages=1)
+                inspect.assert_called_once_with("test-job")
+
+    def test_two_phase_preparation_finishes_before_indexing(self):
+        events = []
+        def make(cached):
+            events.append("cache-only" if cached else "extract")
+            return iter(range(3)) if not cached else iter(["indexed"])
+        def guard():
+            events.append("lease")
+            return True
+        result = worker._prepare_remote_pages_then_index(make, guard)
+        self.assertEqual(events, ["extract", "lease", "lease", "lease", "lease", "cache-only"])
+        self.assertEqual(list(result), ["indexed"])
+
+    def test_two_phase_preparation_does_not_index_partial_book(self):
+        def make(cached):
+            if cached:
+                self.fail("Indexing cannot begin after extraction fails")
+            yield 1
+            raise RuntimeError("interrupted OCR")
+        with self.assertRaisesRegex(RuntimeError, "interrupted OCR"):
+            worker._prepare_remote_pages_then_index(make, lambda: True)
+
+    def test_two_phase_preparation_checks_lease_before_indexing(self):
+        counter = iter([True, False])
+        with self.assertRaisesRegex(RuntimeError, "lease"):
+            worker._prepare_remote_pages_then_index(
+                lambda cached: iter([1]) if not cached else iter([]),
+                lambda: next(counter))
+
+    def test_worker_remote_checkpoint_path_is_integrated(self):
+        import tempfile
+        from pathlib import Path
+        import pymupdf
+        from .remote_document_shards import EncryptedS3ShardStore
+        from .test_remote_document_shards import FakeS3
+
+        with tempfile.TemporaryDirectory() as tmp:
+            pdf = Path(tmp) / "sample.pdf"
+            with pymupdf.open() as document:
+                for i in range(3):
+                    page = document.new_page()
+                    page.insert_text((72, 72), f"Checkpoint integration test page {i+1}")
+                document.save(str(pdf))
+            client = FakeS3()
+            identity = SimpleNamespace(
+                organization_id="org_1", knowledge_base_id="kb_1",
+                document_id="doc_1", document_version_id="ver_1",
+            )
+            kwargs = dict(version_id="ver_1", language="eng", max_ocr_pages=3,
+                          cache_root=None, remote_client=client,
+                          remote_bucket="test-bucket", remote_identity=identity,
+                          remote_key=b"e" * 32,
+                          remote_lease_guard=lambda: True)
+            pages = list(worker._large_book_pdf_segments(pdf, **kwargs))
+            self.assertEqual([p.page_number for p in pages], [1,2,3])
+            self.assertEqual(len(client.objects), 1)
+            cached = list(worker._large_book_pdf_segments(pdf, **kwargs, require_cached=True))
+            self.assertEqual([p.text for p in cached], [p.text for p in pages])
+            self.assertEqual(client.writes, 1)
+            self.assertTrue(all(p.needs_ocr is False for p in pages))
+            self.assertNotIn(b"Checkpoint integration", next(iter(client.objects.values())))
+
+    def test_protected_knowledge_base_ineligible_for_pilot_claim(self):
+        ctx, client = self._prereq_context()
+        from .auto_ingestion_service import PROTECTED_QA_KBS
+        fake_identity = SimpleNamespace(filename="source.pdf", knowledge_base_id=PROTECTED_QA_KBS[0])
+        with ctx:
+            with patch.dict('sys.modules', {'worker.storage_qdrant_probe': SimpleNamespace(
+                    identity_for_job=lambda job: fake_identity)}):
+                with self.assertRaisesRegex(RuntimeError, "Protected QA"):
+                    worker._inspect_prerequisites("job")
+        client.count.assert_not_called()
+
     def test_heartbeat_interval_checked(self):
         with self.assertRaises(ValueError): worker.LeaseHeartbeat("job", "token", interval_seconds=0)
 

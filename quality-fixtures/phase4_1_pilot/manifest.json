@@ -1,0 +1,393 @@
+{
+  "dataset_kind": "synthetic_documents_live_queries",
+  "benchmark_name": "Phase 4.1 isolated six-document live retrieval pilot",
+  "knowledge_base_name": "DocMind Phase4.1 RAG Benchmark - Disposable",
+  "notes": "The documents and answer labels are authored synthetic fixtures; retrieval results become live measurements only after upload and READY status. This is NOT an independent real-world quality set. Only run in a disposable KB.",
+  "document_filenames": [
+    "riverbend_platform.txt",
+    "cedarstone_dispatch_policy.txt",
+    "cedarstone_north_revision.txt",
+    "harbor_finance_rules.txt",
+    "aurora_support_rules.txt",
+    "shapla_bangla_policy.txt"
+  ],
+  "cases": [
+    {
+      "case_id": "en-object-store",
+      "language": "english",
+      "category": "single_document",
+      "question": "Which object store preserves the original uploaded files?",
+      "expected_document_filenames": [
+        "riverbend_platform.txt"
+      ],
+      "reference_answer": "RustFS",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-vector-store",
+      "language": "english",
+      "category": "single_document",
+      "question": "Where are the 384-dimensional vectors stored?",
+      "expected_document_filenames": [
+        "riverbend_platform.txt"
+      ],
+      "reference_answer": "Qdrant",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-metadata",
+      "language": "english",
+      "category": "single_document",
+      "question": "Which relational database stores memberships and ingestion job state?",
+      "expected_document_filenames": [
+        "riverbend_platform.txt"
+      ],
+      "reference_answer": "MySQL",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-queue",
+      "language": "english",
+      "category": "single_document",
+      "question": "Which service transports ingestion tasks to Celery workers?",
+      "expected_document_filenames": [
+        "riverbend_platform.txt"
+      ],
+      "reference_answer": "Redis",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-ready",
+      "language": "english",
+      "category": "single_document",
+      "question": "Can archived document versions appear in the live vector index?",
+      "expected_document_filenames": [
+        "riverbend_platform.txt"
+      ],
+      "reference_answer": "No",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-east",
+      "language": "english",
+      "category": "single_document",
+      "question": "What time is Route East's same-day dispatch cutoff?",
+      "expected_document_filenames": [
+        "cedarstone_dispatch_policy.txt"
+      ],
+      "reference_answer": "14:30 Asia/Dhaka",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-south",
+      "language": "english",
+      "category": "single_document",
+      "question": "When is Route South's same-day dispatch cutoff?",
+      "expected_document_filenames": [
+        "cedarstone_dispatch_policy.txt"
+      ],
+      "reference_answer": "11:45 Asia/Dhaka",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-damage",
+      "language": "english",
+      "category": "numeric_temporal",
+      "question": "How quickly must Cedarstone staff submit a damage photograph?",
+      "expected_document_filenames": [
+        "cedarstone_dispatch_policy.txt"
+      ],
+      "reference_answer": "72 hours",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-next-day",
+      "language": "english",
+      "category": "single_document",
+      "question": "What happens to a complete East request submitted after cutoff?",
+      "expected_document_filenames": [
+        "cedarstone_dispatch_policy.txt"
+      ],
+      "reference_answer": "Next working day's dispatch queue",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-north-conflict",
+      "language": "english",
+      "category": "conflict",
+      "question": "What is the definitive Route North same-day dispatch cutoff?",
+      "expected_document_filenames": [
+        "cedarstone_dispatch_policy.txt",
+        "cedarstone_north_revision.txt"
+      ],
+      "reference_answer": "Conflicting 16:00 and 15:00; do not pick a definitive time",
+      "expected_status": "insufficient_evidence",
+      "split": "development"
+    },
+    {
+      "case_id": "en-bulletin",
+      "language": "english",
+      "category": "single_document",
+      "question": "Was the Route North 15:00 bulletin approved?",
+      "expected_document_filenames": [
+        "cedarstone_north_revision.txt"
+      ],
+      "reference_answer": "No",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-refund",
+      "language": "english",
+      "category": "numeric_temporal",
+      "question": "When does Harbor's five-business-day refund processing window begin?",
+      "expected_document_filenames": [
+        "harbor_finance_rules.txt"
+      ],
+      "reference_answer": "After manager approval",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-invoice",
+      "language": "english",
+      "category": "numeric_temporal",
+      "question": "How many business days does Harbor give to request invoice correction?",
+      "expected_document_filenames": [
+        "harbor_finance_rules.txt"
+      ],
+      "reference_answer": "Seven business days",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-surcharge",
+      "language": "english",
+      "category": "single_document",
+      "question": "What administration surcharge applies to bulk orders above 80 items?",
+      "expected_document_filenames": [
+        "harbor_finance_rules.txt"
+      ],
+      "reference_answer": "12 percent on pre-tax subtotal",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-attachments",
+      "language": "english",
+      "category": "numeric_temporal",
+      "question": "How long does Aurora keep resolved ticket attachments?",
+      "expected_document_filenames": [
+        "aurora_support_rules.txt"
+      ],
+      "reference_answer": "30 days",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-metadata-retention",
+      "language": "english",
+      "category": "numeric_temporal",
+      "question": "How long does Aurora keep resolved ticket metadata?",
+      "expected_document_filenames": [
+        "aurora_support_rules.txt"
+      ],
+      "reference_answer": "90 days",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-ticket-ack",
+      "language": "english",
+      "category": "single_document",
+      "question": "How quickly must Aurora acknowledge a newly submitted support ticket?",
+      "expected_document_filenames": [
+        "aurora_support_rules.txt"
+      ],
+      "reference_answer": "One business day",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-cross-doc",
+      "language": "english",
+      "category": "multi_document",
+      "question": "What is Riverbend's vector database and Aurora's resolved attachment retention period?",
+      "expected_document_filenames": [
+        "riverbend_platform.txt",
+        "aurora_support_rules.txt"
+      ],
+      "reference_answer": "Qdrant and 30 days",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "en-support-unknown",
+      "language": "english",
+      "category": "unanswerable",
+      "question": "What is Aurora's published public support telephone number?",
+      "expected_document_filenames": [],
+      "reference_answer": "insufficient_evidence",
+      "expected_status": "insufficient_evidence",
+      "split": "development"
+    },
+    {
+      "case_id": "en-finance-unknown",
+      "language": "english",
+      "category": "unanswerable",
+      "question": "What is Harbor's current bank account number?",
+      "expected_document_filenames": [],
+      "reference_answer": "insufficient_evidence",
+      "expected_status": "insufficient_evidence",
+      "split": "development"
+    },
+    {
+      "case_id": "en-vector-price-unknown",
+      "language": "english",
+      "category": "unanswerable",
+      "question": "What is the cost per million Qdrant queries?",
+      "expected_document_filenames": [],
+      "reference_answer": "insufficient_evidence",
+      "expected_status": "insufficient_evidence",
+      "split": "development"
+    },
+    {
+      "case_id": "bn-return",
+      "language": "bangla",
+      "category": "single_document",
+      "question": "শাপলা দোকানে কত দিনের মধ্যে সাধারণ পণ্যের ফেরতের আবেদন করতে হবে?",
+      "expected_document_filenames": [
+        "shapla_bangla_policy.txt"
+      ],
+      "reference_answer": "১৪ দিন",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "bn-damage",
+      "language": "bangla",
+      "category": "numeric_temporal",
+      "question": "শাপলা দোকানে ক্ষতিগ্রস্ত পণ্যের ছবি কত ঘণ্টার মধ্যে জমা দিতে হবে?",
+      "expected_document_filenames": [
+        "shapla_bangla_policy.txt"
+      ],
+      "reference_answer": "৪৮ ঘণ্টা",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "bn-approval",
+      "language": "bangla",
+      "category": "numeric_temporal",
+      "question": "শাপলা দোকানে ফেরত অনুমোদনের পর কত কর্মদিবসে সিদ্ধান্ত জানাতে হবে?",
+      "expected_document_filenames": [
+        "shapla_bangla_policy.txt"
+      ],
+      "reference_answer": "তিন কর্মদিবস",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "bn-phone",
+      "language": "bangla",
+      "category": "unanswerable",
+      "question": "শাপলা গ্রাহক সেবার প্রকাশিত ফোন নম্বর কী?",
+      "expected_document_filenames": [],
+      "reference_answer": "insufficient_evidence",
+      "expected_status": "insufficient_evidence",
+      "split": "development"
+    },
+    {
+      "case_id": "bn-east",
+      "language": "bangla",
+      "category": "single_document",
+      "question": "সিডারস্টোন রুট ইস্টের একই দিনে পাঠানোর শেষ সময় কখন?",
+      "expected_document_filenames": [
+        "cedarstone_dispatch_policy.txt"
+      ],
+      "reference_answer": "14:30 Asia/Dhaka",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "bn-storage",
+      "language": "bangla",
+      "category": "single_document",
+      "question": "রিভারবেন্ডের আসল আপলোড করা ফাইলগুলো কোন স্টোরেজে থাকে?",
+      "expected_document_filenames": [
+        "riverbend_platform.txt"
+      ],
+      "reference_answer": "RustFS",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "mixed-support",
+      "language": "mixed",
+      "category": "single_document",
+      "question": "Aurora resolved ticket attachments কত দিন retain করে?",
+      "expected_document_filenames": [
+        "aurora_support_rules.txt"
+      ],
+      "reference_answer": "30 days",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "mixed-vector",
+      "language": "mixed",
+      "category": "single_document",
+      "question": "Riverbend document embeddings কোন vector database-এ থাকে?",
+      "expected_document_filenames": [
+        "riverbend_platform.txt"
+      ],
+      "reference_answer": "Qdrant",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "mixed-refund",
+      "language": "mixed",
+      "category": "numeric_temporal",
+      "question": "Harbor refund processing window কখন শুরু হয়?",
+      "expected_document_filenames": [
+        "harbor_finance_rules.txt"
+      ],
+      "reference_answer": "After manager approval",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "mixed-multi",
+      "language": "mixed",
+      "category": "multi_document",
+      "question": "Riverbend object store আর Harbor invoice correction time কত?",
+      "expected_document_filenames": [
+        "riverbend_platform.txt",
+        "harbor_finance_rules.txt"
+      ],
+      "reference_answer": "RustFS and seven business days",
+      "expected_status": "answered",
+      "split": "development"
+    },
+    {
+      "case_id": "mixed-unknown",
+      "language": "mixed",
+      "category": "unanswerable",
+      "question": "Cedarstone support team-এর private API token কী?",
+      "expected_document_filenames": [],
+      "reference_answer": "insufficient_evidence",
+      "expected_status": "insufficient_evidence",
+      "split": "development"
+    }
+  ]
+}

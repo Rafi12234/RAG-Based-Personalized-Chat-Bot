@@ -59,6 +59,21 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual([s.kind for s in segments], ["docx_paragraph", "docx_table_row", "docx_paragraph"])
         self.assertEqual(segments[1].text, "Column A | Column B")
 
+    def test_docx_table_header_is_preserved_with_each_data_row(self):
+        path = self.root / "large_table.docx"
+        doc = Document()
+        table = doc.add_table(rows=0, cols=2)
+        for columns in (("Part Number", "Unit Price"),
+                        ("SKU-0099", "$750"), ("SKU-0100", "$920")):
+            cells = table.add_row().cells
+            for i, value in enumerate(columns):
+                cells[i].text = value
+        doc.save(path)
+        parts = list(iter_extracted_segments(path, "large_table.docx"))
+        self.assertEqual(parts[0].text, "Part Number | Unit Price")
+        self.assertIn("Part Number: SKU-0099", parts[1].text)
+        self.assertIn("Unit Price: $920", parts[2].text)
+
     def test_txt_utf8_bom(self):
         path = self.root / "sample.txt"
         path.write_bytes(b"\xef\xbb\xbfHello, DocMind AI")

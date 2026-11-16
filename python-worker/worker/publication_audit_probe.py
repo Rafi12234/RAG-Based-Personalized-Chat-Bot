@@ -16,7 +16,7 @@ from .publication_audit import audit_publication_counts, interpret_publication_s
 from .storage_qdrant_probe import identity_for_job
 
 
-def inspect_publication(job_id: str) -> dict:
+def inspect_publication(job_id: str, *, detailed: bool = False) -> dict:
     state = read_job_state(job_id)
     if state is None:
         raise ValueError("Ingestion job not found")
@@ -24,9 +24,13 @@ def inspect_publication(job_id: str) -> dict:
     client = local_client()
     try:
         counts = audit_publication_counts(client, identity)
+        large_report = None
+        if detailed:
+            from .large_vector_audit import inspect_large_version
+            large_report = inspect_large_version(client, identity).as_dict()
     finally:
         client.close()
-    return {
+    result = {
         "job_id": job_id,
         "job_status": state.job_status,
         "document_status": state.document_status,
@@ -42,14 +46,20 @@ def inspect_publication(job_id: str) -> dict:
         "qdrant_written": False,
         "automatic_ingestion_enabled": False,
     }
+    if detailed:
+        result["large_version_metadata_audit"] = large_report
+        result["snapshot_is_transactional"] = False
+    return result
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("job_id")
+    parser.add_argument("--detailed", action="store_true",
+                        help="Scroll up to 50000 scoped metadata-only vectors; never changes data")
     args = parser.parse_args(argv)
     try:
-        print(json.dumps(inspect_publication(args.job_id), indent=2))
+        print(json.dumps(inspect_publication(args.job_id, detailed=args.detailed), indent=2))
         return 0
     except Exception as exc:
         # Keep storage keys and credentials out of CLI diagnostics.

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, jsonBody } from "./api";
+import AnswerPanel from "./components/AnswerPanel";
 import "./App.css";
 
 type Role = "OWNER" | "ADMIN" | "MEMBER";
@@ -15,12 +16,14 @@ type Doc = { id: string; title: string; createdAt: string; uploadedById: string;
 type Reply<T> = { success: true } & T;
 
 export default function App() {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !new URLSearchParams(window.location.hash.slice(1)).has("reset"));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [user, setUser] = useState<User | null>(null);
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [resetToken, setResetToken] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("reset") ?? "");
+  const [mode, setMode] = useState<"login" | "register" | "forgot" | "reset">(() =>
+    new URLSearchParams(window.location.hash.slice(1)).has("reset") ? "reset" : "login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -78,6 +81,11 @@ export default function App() {
   }
 
   useEffect(() => {
+    // Remove the one-time secret from browser history; do not retain it in a URL.
+    if (resetToken) window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, [resetToken]);
+  useEffect(() => {
+    if (resetToken) return;
     api<Reply<{ user: User }>>("/auth/me")
       .then(r => setUser(r.user))
       .catch(() => setUser(null))
@@ -96,11 +104,41 @@ export default function App() {
       ]).catch(report));
     }
   }, [orgId]);
+  // Ingestion status is the ONLY reason to poll. When every document is READY
+  // (or FAILED), stop background reads and reduce database authentication load.
+  // Uploads refresh the list and reactivate polling when a version is pending.
+  const hasPendingDocuments = docs.some(doc => doc.latestVersion &&
+    doc.latestVersion.status !== "READY" && doc.latestVersion.status !== "FAILED");
+
   useEffect(() => {
-    if (baseId) {
-      void Promise.resolve().then(() => refreshDocuments(baseId).catch(report));
-    }
-  }, [baseId]);
+    if (!baseId) return;
+    let alive = true;
+    let inFlight = false;
+    const controller = new AbortController();
+    const poll = async () => {
+      if (!alive || inFlight || document.visibilityState === "hidden") return;
+      inFlight = true;
+      try {
+        const reply = await api<Reply<{ documents: Doc[] }>>(
+          `/knowledge-bases/${encodeURIComponent(baseId)}/documents`,
+          { signal: controller.signal },
+        );
+        if (alive) setDocs(reply.documents);
+      } catch (err) {
+        if (alive && !controller.signal.aborted) report(err);
+      } finally {
+        inFlight = false;
+      }
+    };
+    void poll();
+    const interval = hasPendingDocuments
+      ? window.setInterval(() => { void poll(); }, 5000) : undefined;
+    return () => {
+      alive = false;
+      controller.abort();
+      if (interval !== undefined) window.clearInterval(interval);
+    };
+  }, [baseId, hasPendingDocuments]);
 
   async function submitAuth(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -114,6 +152,25 @@ export default function App() {
       setUser(result.user);
       setPassword("");
       setNotice(`Welcome${mode === "register" ? " to DocMind-AI" : " back"}!`);
+    });
+  }
+  async function submitForgot(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    await run(async () => {
+      await api("/auth/forgot-password", { method: "POST", ...jsonBody({ email }) });
+      setNotice("If your email belongs to an active account, a reset link will be sent.");
+      setMode("login");
+      setPassword("");
+    });
+  }
+  async function submitReset(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    await run(async () => {
+      await api("/auth/reset-password", { method: "POST", ...jsonBody({ token: resetToken, password }) });
+      setResetToken("");
+      setPassword("");
+      setMode("login");
+      setNotice("Password updated. Please sign in with your new password.");
     });
   }
   async function logout() {
@@ -214,17 +271,35 @@ export default function App() {
       <div className="auth-brand"><span className="brand-mark">D</span> DocMind<span>AI</span></div>
       <section className="auth-panel">
         <p className="eyebrow">PRIVATE DOCUMENT INTELLIGENCE</p>
-        <h1>{mode === "login" ? "Welcome back" : "Create your workspace"}</h1>
-        <p className="subtle">Manage documents securely. AI-powered question answering arrives in the next phases.</p>
-        <form className="stack" onSubmit={submitAuth}>
-          {mode === "register" && <label>Your name<input required minLength={2} maxLength={120} value={name} onChange={e => setName(e.target.value)} /></label>}
-          <label>Email address<input required type="email" maxLength={191} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
-          <label>Password<input required type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={mode === "register" ? 12 : 1} value={password} onChange={e => setPassword(e.target.value)} /></label>
-          {mode === "register" && <label>Workspace name<input required minLength={2} maxLength={150} value={organizationName} onChange={e => setOrganizationName(e.target.value)} /></label>}
-          {error && <p role="alert" className="message error">{error}</p>}
-          <button className="primary" disabled={busy}>{busy ? "Working…" : mode === "login" ? "Sign in" : "Create account"}</button>
-        </form>
-        <p className="auth-switch">{mode === "login" ? "New to DocMind-AI?" : "Already have an account?"} <button className="link-button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>{mode === "login" ? "Create account" : "Sign in"}</button></p>
+        <h1>{mode === "login" ? "Welcome back" : mode === "register" ? "Create your workspace" : mode === "forgot" ? "Reset your password" : "Choose a new password"}</h1>
+        <p className="subtle">{mode === "forgot" ? "Enter your registered email to request a 30-minute reset link." : mode === "reset" ? "Use a new password with at least 12 characters." : "Manage documents securely and ask evidence-grounded questions from your knowledge bases."}</p>
+        {mode === "forgot" ? (
+          <form className="stack" onSubmit={submitForgot}>
+            <label>Email address<input required type="email" maxLength={191} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
+            {error && <p role="alert" className="message error">{error}</p>}
+            <button className="primary" disabled={busy}>{busy ? "Working…" : "Send reset link"}</button>
+          </form>
+        ) : mode === "reset" ? (
+          <form className="stack" onSubmit={submitReset}>
+            <label>New password<input required type="password" minLength={12} maxLength={128} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} /></label>
+            {error && <p role="alert" className="message error">{error}</p>}
+            <button className="primary" disabled={busy || !resetToken}>{busy ? "Working…" : "Update password"}</button>
+          </form>
+        ) : (
+          <form className="stack" onSubmit={submitAuth}>
+            {mode === "register" && <label>Your name<input required minLength={2} maxLength={120} value={name} onChange={e => setName(e.target.value)} /></label>}
+            <label>Email address<input required type="email" maxLength={191} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
+            <label>Password<input required type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={mode === "register" ? 12 : 1} value={password} onChange={e => setPassword(e.target.value)} /></label>
+            {mode === "register" && <label>Workspace name<input required minLength={2} maxLength={150} value={organizationName} onChange={e => setOrganizationName(e.target.value)} /></label>}
+            {error && <p role="alert" className="message error">{error}</p>}
+            <button className="primary" disabled={busy}>{busy ? "Working…" : mode === "login" ? "Sign in" : "Create account"}</button>
+          </form>
+        )}
+        {notice && <p role="status" className="message success">{notice}</p>}
+        <p className="auth-switch">
+          {mode === "login" && <><button className="link-button" type="button" onClick={() => { setMode("forgot"); setError(""); }}>Forgot password?</button>{" · "}<button className="link-button" type="button" onClick={() => { setMode("register"); setError(""); }}>Create account</button></>}
+          {mode !== "login" && <button className="link-button" type="button" onClick={() => { setMode("login"); setPassword(""); setResetToken(""); setError(""); }}>Back to sign in</button>}
+        </p>
       </section>
       <p className="auth-foot">Your documents remain isolated by workspace membership.</p>
     </main>
@@ -248,7 +323,7 @@ export default function App() {
         <div className="side-profile"><div className="avatar">{user.name.slice(0, 1).toUpperCase()}</div><div className="side-user"><strong>{user.name}</strong><small>{user.email}</small></div><button title="Sign out" className="icon-button" onClick={logout} disabled={busy}>↪</button></div>
       </aside>
       <main className="main-content">
-        <header className="topbar"><div><p className="eyebrow">PHASE 1 · DOCUMENT FOUNDATION</p><h1>{selectedBase?.name || "Workspace overview"}</h1><p className="subtle">{selectedOrg?.name ?? "Select a workspace"} · {selectedOrg?.role ?? ""}</p></div><span className="stage-label">Ingestion in Phase 2</span></header>
+        <header className="topbar"><div><p className="eyebrow">PRIVATE DOCUMENT WORKSPACE · PHASE 3 PILOT</p><h1>{selectedBase?.name || "Workspace overview"}</h1><p className="subtle">{selectedOrg?.name ?? "Select a workspace"} · {selectedOrg?.role ?? ""}</p></div><span className="stage-label">Evidence-grounded Q&amp;A</span></header>
         {error && <p role="alert" className="message error">{error}</p>}
         {notice && <p role="status" className="message success">{notice}</p>}
         <div className="stat-grid">
@@ -256,6 +331,9 @@ export default function App() {
           <div className="stat"><span>Documents</span><strong>{bases.reduce((sum, b) => sum + (b._count?.documents ?? 0), 0)}</strong><small>Active in workspace</small></div>
           <div className="stat"><span>Members</span><strong>{members.length}</strong><small>With workspace access</small></div>
         </div>
+        {baseId && (
+          <AnswerPanel key={baseId} knowledgeBaseId={baseId} knowledgeBaseName={selectedBase?.name ?? "Selected knowledge base"} />
+        )}
         <div className="content-grid">
           <section className="panel wide"><div className="panel-heading"><div><h2>Documents</h2><p className="subtle">{selectedBase ? `${selectedBase.name} · supported formats: PDF, DOCX, TXT` : "Create or select a knowledge base to get started"}</p></div>{selectedBase && isManager && <div className="panel-actions"><button className="secondary" type="button" disabled={busy} onClick={editKB}>Edit collection</button><button className="secondary" type="button" disabled={busy} onClick={deleteKB}>Delete empty collection</button></div>}</div>
             {baseId ? <>

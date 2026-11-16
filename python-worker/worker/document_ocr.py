@@ -84,6 +84,9 @@ def iter_pdf_segments_with_ocr(
     max_ocr_pages: int = DEFAULT_OCR_MAX_PAGES,
     on_ocr: Callable[[int], None] | None = None,
     on_blank: Callable[[int], None] | None = None,
+    on_page: Callable[[int, str, int], None] | None = None,
+    start_page: int = 1,
+    end_page: int | None = None,
 ) -> Iterator[ExtractedSegment]:
     """Yield page-ordered segments with OCR for suspected image-only pages.
 
@@ -105,6 +108,12 @@ def iter_pdf_segments_with_ocr(
         raise TypeError("on_ocr must be a callback")
     if on_blank is not None and not callable(on_blank):
         raise TypeError("on_blank must be a callback")
+    if on_page is not None and not callable(on_page):
+        raise TypeError("on_page must be a callback")
+    if type(start_page) is not int or start_page < 1:
+        raise ValueError("start_page must be >= 1")
+    if end_page is not None and (type(end_page) is not int or end_page < start_page):
+        raise ValueError("end_page must be >= start_page")
     candidate = Path(path)
     if candidate.suffix.lower() != ".pdf":
         raise DocumentExtractionError("OCR is only supported for PDF files")
@@ -119,22 +128,32 @@ def iter_pdf_segments_with_ocr(
             if pdf.page_count > MAX_PDF_PAGES:
                 raise DocumentExtractionError("PDF page limit exceeded")
 
-            for number, page in enumerate(pdf, start=1):
+            last = pdf.page_count if end_page is None else end_page
+            if start_page > pdf.page_count or last > pdf.page_count:
+                raise DocumentExtractionError("Page range exceeds the PDF page count")
+            data_dir = None
+            for number in range(start_page, last + 1):
+                page = pdf.load_page(number - 1)
                 native = page.get_text("text", sort=True)
                 if len(native.strip()) >= NATIVE_TEXT_THRESHOLD:
+                    if on_page is not None:
+                        on_page(number, "native", len(native))
                     yield ExtractedSegment(native, "pdf_page", page_number=number, needs_ocr=False)
                     continue
 
                 if not _page_has_visual_content(page):
                     if not native.strip() and on_blank is not None:
                         on_blank(number)
+                    if on_page is not None:
+                        on_page(number, "blank" if not native.strip() else "native", len(native))
                     yield ExtractedSegment(native, "pdf_page", page_number=number, needs_ocr=False)
                     continue
 
                 ocr_count += 1
                 if ocr_count > max_ocr_pages:
                     raise OCRExtractionError("OCR page budget exceeded; retry with an explicit larger budget")
-                data_dir = resolve_tessdata(language, tessdata)
+                if data_dir is None:
+                    data_dir = resolve_tessdata(language, tessdata)
                 try:
                     tp = page.get_textpage_ocr(
                         language=language, dpi=dpi, full=True, tessdata=str(data_dir)
@@ -146,6 +165,8 @@ def iter_pdf_segments_with_ocr(
                     raise OCRExtractionError(f"Visual page {number} produced no OCR text")
                 if on_ocr is not None:
                     on_ocr(number)
+                if on_page is not None:
+                    on_page(number, "ocr", len(recognized))
                 yield ExtractedSegment(recognized, "pdf_page", page_number=number, needs_ocr=False)
     except (DocumentExtractionError, OCRExtractionError):
         raise

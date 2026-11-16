@@ -51,6 +51,9 @@ class FakePDF:
     def __iter__(self):
         return iter(self.pages)
 
+    def load_page(self, index):
+        return self.pages[index]
+
 
 class OCRTests(unittest.TestCase):
     def setUp(self):
@@ -143,6 +146,31 @@ class OCRTests(unittest.TestCase):
         with patch("worker.document_ocr.pymupdf.open", return_value=pdf):
             with self.assertRaises(DocumentExtractionError):
                 list(iter_pdf_segments_with_ocr("demo.pdf"))
+
+    def test_page_range_extracts_only_requested_pages_with_original_numbers(self):
+        pages = [FakePage(f"Page {i} readable content for testing")
+                 for i in range(1, 101)]
+        seen = []
+        result = self.run_pages(
+            pages, start_page=50, end_page=52,
+            on_page=lambda page, mode, count: seen.append((page, mode, count)))
+        self.assertEqual([x.page_number for x in result], [50, 51, 52])
+        self.assertEqual([x.text for x in result],
+                         [pages[i].native for i in range(49, 52)])
+        self.assertEqual([x[1] for x in seen], ["native"] * 3)
+
+    def test_ocr_page_callback_classifies_each_page_without_text(self):
+        events = []
+        self.run_pages([FakePage("Title"), FakePage(images=True), FakePage()],
+                       on_page=lambda *args: events.append(args))
+        self.assertEqual([x[1] for x in events], ["native", "ocr", "blank"])
+        self.assertEqual([x[0] for x in events], [1, 2, 3])
+
+    def test_invalid_pdf_range_rejected(self):
+        for options in ({"start_page": 0}, {"start_page": 2, "end_page": 1},
+                        {"start_page": 1, "end_page": 3}, {"start_page": 9}):
+            with self.assertRaises((ValueError, DocumentExtractionError)):
+                self.run_pages([FakePage("valid page")], **options)
 
 
 if __name__ == "__main__":
