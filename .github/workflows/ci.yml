@@ -83,7 +83,13 @@ jobs:
         run: python -m compileall -q python-worker/worker
       - name: Guarded automatic ingestion unit tests
         working-directory: python-worker
-        run: python -m unittest worker.test_auto_ingestion_service
+        run: python -m unittest worker.test_docx_table_rows worker.test_auto_ingestion_service worker.test_large_document_shards worker.test_live_ingestion_worker
+      - name: Install Phase 4.2 extraction test dependencies
+        working-directory: python-worker
+        run: python -m pip install "PyMuPDF>=1.24,<2.0" "python-docx>=1.1,<2.0" "boto3>=1.35,<2.0"
+      - name: Phase 4.2 PDF OCR and DOCX extraction regression
+        working-directory: python-worker
+        run: python -m unittest worker.test_document_ocr worker.test_document_extraction
       - name: Phase 4.1 offline AI quality evaluator unit tests
         working-directory: python-worker
         run: python -m unittest worker.test_phase4_ai_quality worker.test_phase3_retrieval_quality

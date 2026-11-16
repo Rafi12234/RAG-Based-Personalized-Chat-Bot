@@ -27,6 +27,35 @@ class PilotSafetyTests(unittest.TestCase):
         with patch.dict(os.environ, {worker.PILOT_FLAG: worker.PILOT_VALUE}):
             with self.assertRaises(ValueError): worker.run_pilot_ingestion("x", max_ocr_pages=11)
 
+    def test_large_book_budget_requires_explicit_opt_in_and_private_cache(self):
+        env = {worker.PILOT_FLAG: worker.PILOT_VALUE,
+               worker.LARGE_BOOK_FLAG: "", worker.LARGE_BOOK_CACHE_ENV: ""}
+        with patch.dict(os.environ, env):
+            with self.assertRaises(ValueError):
+                worker.run_pilot_ingestion("test-job", max_ocr_pages=12)
+        env[worker.LARGE_BOOK_FLAG] = worker.LARGE_BOOK_VALUE
+        with patch.dict(os.environ, env):
+            with self.assertRaisesRegex(ValueError, "private checkpoint"):
+                worker.run_pilot_ingestion("test-job", max_ocr_pages=12)
+        env[worker.LARGE_BOOK_CACHE_ENV] = "/tmp/private-docmind-largebook"
+        with patch.dict(os.environ, env):
+            with patch.object(worker, "_inspect_prerequisites",
+                              side_effect=RuntimeError("preflight-only")) as inspect:
+                with self.assertRaisesRegex(RuntimeError, "preflight-only"):
+                    worker.run_pilot_ingestion("test-job", max_ocr_pages=12)
+                inspect.assert_called_once_with("test-job")
+
+    def test_protected_knowledge_base_ineligible_for_pilot_claim(self):
+        ctx, client = self._prereq_context()
+        from .auto_ingestion_service import PROTECTED_QA_KBS
+        fake_identity = SimpleNamespace(filename="source.pdf", knowledge_base_id=PROTECTED_QA_KBS[0])
+        with ctx:
+            with patch.dict('sys.modules', {'worker.storage_qdrant_probe': SimpleNamespace(
+                    identity_for_job=lambda job: fake_identity)}):
+                with self.assertRaisesRegex(RuntimeError, "Protected QA"):
+                    worker._inspect_prerequisites("job")
+        client.count.assert_not_called()
+
     def test_heartbeat_interval_checked(self):
         with self.assertRaises(ValueError): worker.LeaseHeartbeat("job", "token", interval_seconds=0)
 

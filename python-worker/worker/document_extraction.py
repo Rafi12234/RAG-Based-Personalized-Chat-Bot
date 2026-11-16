@@ -16,6 +16,8 @@ import pymupdf
 from docx import Document as OpenDocx
 from docx.table import Table
 
+from .docx_table_rows import label_docx_table_rows
+
 MAX_PDF_PAGES = 5000
 MAX_ZIP_ENTRIES = 10000
 MAX_DOCX_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
@@ -93,10 +95,9 @@ def _docx_segments(path: Path) -> Iterator[ExtractedSegment]:
         document = OpenDocx(str(path))
         for item in document.iter_inner_content():
             if isinstance(item, Table):
-                for row in item.rows:
-                    text = " | ".join(cell.text.strip() for cell in row.cells).strip()
-                    if text:
-                        yield ExtractedSegment(text=text, kind="docx_table_row")
+                rows = ([cell.text for cell in row.cells] for row in item.rows)
+                for text in label_docx_table_rows(rows):
+                    yield ExtractedSegment(text=text, kind="docx_table_row")
             else:
                 text = item.text.strip()
                 if text:
