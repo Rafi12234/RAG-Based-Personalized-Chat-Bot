@@ -410,6 +410,12 @@ def run_pilot_ingestion(job_id: str, *, language: str = "eng", max_ocr_pages: in
                 segments = iter_pdf_segments_with_ocr(
                     local_file, language=language, max_ocr_pages=max_ocr_pages,
                 )
+            elif ext == ".docx" and large_mode:
+                from .document_structure import iter_structured_docx_segments
+                # Opt-in structured DOCX indexing preserves chapter ancestry
+                # within evidence text; v2 fine-grained locators come later.
+                segments = iter_structured_docx_segments(
+                    local_file, identity.document_version_id)
             else:
                 segments = iter_extracted_segments(local_file, identity.filename)
             tokenizer = _tokenizer()
