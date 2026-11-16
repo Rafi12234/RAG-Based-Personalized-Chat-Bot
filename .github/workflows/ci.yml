@@ -93,6 +93,9 @@ jobs:
       - name: Phase 4.2C structure extraction and large-version recovery audit tests
         working-directory: python-worker
         run: python -m unittest worker.test_document_structure worker.test_large_vector_audit worker.test_large_publication_probe
+      - name: Phase 4.3A hierarchical passages and isolated shadow-index staging
+        working-directory: python-worker
+        run: python -m unittest worker.test_hierarchical_index worker.test_hierarchical_shadow
       - name: Phase 4.1 offline AI quality evaluator unit tests
         working-directory: python-worker
         run: python -m unittest worker.test_phase4_ai_quality worker.test_phase3_retrieval_quality
