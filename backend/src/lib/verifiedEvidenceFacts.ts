@@ -38,7 +38,7 @@ function duration(s: string, business: boolean, unit: "day" | "hour" = "day"): s
     (business ? " business" : "") + " " + unit + (n === 1 ? "" : "s");
 }
 function sentences(source: VerifiedSource): string[] {
-  const excerpt = source.excerpt.slice(0, 800).replace(/\\r\\n|\\n|\\r/gu, " ")
+  const excerpt = source.excerpt.slice(0, 1600).replace(/\\r\\n|\\n|\\r/gu, " ")
     .replace(/\s+/gu, " ");
   return excerpt.split(/(?<=[.!?।])\s+|[;\r\n]+/u).map(s => s.trim()).filter(Boolean);
 }
@@ -96,8 +96,10 @@ function plan(question: string): Slot[] {
     slot(out, "attachments", at(/\battachments?\b/u));
   if (/\bmetadata\b/iu.test(q) && /\b(?:ticket|resolved|retain|retained|retention|attachments?)\b|কত\s+দিন/u.test(q))
     slot(out, "metadata", at(/\bmetadata\b/u));
+  // A bare "which database stores vectors?" is ambiguous. Do not bypass
+  // model attribution without an explicit vector-database or location intent.
   if (/\bvector\s+database\b/iu.test(q) ||
-      (/\b(?:vectors?|embeddings?)\b/iu.test(q) && /\b(?:where|stored|store|which)\b|কোন/u.test(q)))
+      /\bwhere\b.*\b(?:vectors?|embeddings?)\b.*\bstor(?:ed|e)\b/iu.test(q))
     slot(out, "vector", at(/\bvector|embedding/u));
   if (/\bobject\s+store\b|স্টোরেজ/u.test(q))
     slot(out, "object", at(/\bobject\s+store\b|স্টোরেজ/u));
@@ -115,6 +117,13 @@ function plan(question: string): Slot[] {
 }
 function org(source: VerifiedSource): string | null {
   return /^([a-z][a-z0-9]{3,39})[_-]/iu.exec(source.documentTitle)?.[1].toLowerCase() ?? null;
+}
+/** True only if an organization name from a trusted document title appears
+ * explicitly in the question. Used to prevent cross-organization policy borrowing.
+ */
+export function namesVerifiedOrganization(question: string, sources: readonly VerifiedSource[]): boolean {
+  return sources.map(org).filter((s): s is string => s !== null)
+    .some(name => new RegExp("\\b" + name + "\\b", "iu").test(question));
 }
 function indicesFor(slot: Slot, question: string, sources: readonly VerifiedSource[], slotCount: number): number[] {
   const names = [...new Set(sources.map(org).filter((s): s is string => s !== null))];
@@ -139,8 +148,17 @@ function fact(slot: Slot, allowed: number[], sources: readonly VerifiedSource[],
     const q = slot.kind === "vector" ? "Where are document embedding vectors stored?"
       : "Which object store holds original uploaded source documents?";
     const r = resolveNamedInfrastructure(q, scoped);
-    return r.state === "found" ?
-      { value: r.name, key: r.name, sourceIndex: allowed[r.sourceIndex] } : null;
+    if (r.state !== "found") return null;
+    const index = allowed[r.sourceIndex];
+    if (slot.kind === "vector") {
+      // Generic "document vectors" alone does not establish that a service is
+      // an embedding-vector database. Require explicit embedding evidence.
+      const matching = sentences(sources[index]).some(sentence =>
+        new RegExp("\\b" + r.name + "\\b", "iu").test(sentence) &&
+        /\b(?:embedding|embeddings|dimensional|vector\s+database)\b/iu.test(sentence));
+      if (!matching) return null;
+    }
+    return { value: r.name, key: r.name, sourceIndex: index };
   }
   if (slot.kind === "database") {
     const r = resolveExplicitRelationalDatabase("Which relational database stores memberships and ingestion job state?", scoped);

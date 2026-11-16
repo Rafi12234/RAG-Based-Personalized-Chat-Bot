@@ -54,7 +54,7 @@ export type VerifiedSource = Readonly<{
   score: number;
 }>;
 
-const MAX_EXCERPT_CODEPOINTS = 800;
+const MAX_EXCERPT_CODEPOINTS = 1600;
 
 /**
  * Return null (not a partially trusted source) when ANY guard fails.

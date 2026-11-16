@@ -10,7 +10,7 @@ import { extractExplicitDuration } from "../lib/explicitDuration.js";
 import { extractBanglaDuration } from "../lib/explicitBanglaDuration.js";
 import { extractDirectPolicyFact } from "../lib/directPolicyFacts.js";
 import { extractMultiDocumentFact } from "../lib/explicitMultiDocumentFacts.js";
-import { resolveVerifiedFacts } from "../lib/verifiedEvidenceFacts.js";
+import { resolveVerifiedFacts, namesVerifiedOrganization } from "../lib/verifiedEvidenceFacts.js";
 import { infrastructureQuestionKind, resolveNamedInfrastructure } from "../lib/namedInfrastructure.js";
 import { resolveExplicitServiceActor } from "../lib/explicitServiceActor.js";
 import { resolveExplicitRelationalDatabase } from "../lib/explicitRelationalDatabase.js";
@@ -47,7 +47,7 @@ export type GroundedAnswer = Readonly<{
  * This avoids asking a small multilingual LLM to retype English quotation text.
  */
 function evidenceChoices(source: VerifiedSource, sourceIndex: number): { id: string; quote: string }[] {
-  const excerpt = source.excerpt.slice(0, 800);
+  const excerpt = source.excerpt.slice(0, 1600);
   const segments = excerpt.split(/(?<=[.!?।])\s+|\r?\n+/u)
     .map(part => part.trim())
     .filter(part => Array.from(part).length >= 10 && excerpt.includes(part));
@@ -530,6 +530,10 @@ export async function generateGroundedAnswer(
     // Recognized multi-part intent must never degrade to an incomplete answer.
     return verifiedResponse()!;
   }
+  // If a named organization's facts are absent, do not let an old
+  // single-fact extractor borrow another organization's policy.
+  if (verified.state === "insufficient" &&
+      namesVerifiedOrganization(question, selected)) return verifiedResponse()!;
   const extracted = extractHttpStatusAnswer(question, selected)
     ?? extractRouteDispatchCutoffAnswer(question, selected);
   if (extracted) {

@@ -25,12 +25,12 @@ test("Phase4.1: service actor is identified by verified sentence, not memorized 
     { state: "found", name: "MessageBus", sourceIndex: 0 });
 });
 
-test("Phase4.1: model abstention on real service relation recovers a cited answer", async () => {
+test("Phase4.1: verified service relation is answered before requiring Ollama", async () => {
   let calls = 0;
   const result = await generateGroundedAnswer(question, [source(evidence)], async () => {
     calls++; return abstain;
   });
-  assert.equal(calls, 2);
+  assert.equal(calls, 0);
   assert.equal(result.status, "answered");
   assert.equal(result.answer, "Redis [S1].");
   assert.equal(result.citations[0].documentTitle, "riverbend_platform.txt");

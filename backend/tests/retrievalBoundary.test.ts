@@ -95,8 +95,8 @@ test("malformed point IDs, scores and payload fields fail closed", () => {
 });
 
 test("page absent stays null, excerpts remain bounded", () => {
-  const result = verifiedSourceFromHit(scope, withPayload({ page_number: null, text: "😀".repeat(900) }), relational);
+  const result = verifiedSourceFromHit(scope, withPayload({ page_number: null, text: "😀".repeat(1800) }), relational);
   assert.ok(result);
   assert.equal(result.pageNumber, null);
-  assert.equal(Array.from(result.excerpt).length, 800);
+  assert.equal(Array.from(result.excerpt).length, 1600);
 });

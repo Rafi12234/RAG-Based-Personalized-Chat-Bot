@@ -22,12 +22,12 @@ test("Phase4.1: relational database is read from exact verified sentence", () =>
     { state: "found", name: "LedgerDB", sourceIndex: 0 });
 });
 
-test("Phase4.1: live missed MySQL fact recovers after model abstentions", async () => {
+test("Phase4.1: verified relational fact is answered without a model roundtrip", async () => {
   let calls = 0;
   const result = await generateGroundedAnswer(question, [source(fact)], async () => {
     calls++; return abstain;
   });
-  assert.equal(calls, 2);
+  assert.equal(calls, 0);
   assert.equal(result.status, "answered");
   assert.equal(result.answer, "MySQL [S1].");
   assert.equal(result.citations[0].documentTitle, "riverbend_platform.txt");
