@@ -8,7 +8,7 @@
 - Binds every immutable checkpoint to MySQL-derived **organization, knowledge base, document and version IDs**, the downloaded original file SHA-256, total page count, page range and exact extraction profile (parser/OCR language/DPI).
 - Uses authenticated encryption with random nonces and strict source/page-level checks. Refuses malformed, oversized, duplicated, reordered, tampered, cross-tenant and mismatched checkpoints rather than silently indexing them.
 - Uses S3 \`PutObject(IfNoneMatch="*")\` to prevent overwriting existing checkpoints. If a storage provider doesn't support conditional creation, writes fail closed; there is **no** unsafe fallback.
-- Reuses existing page-range processing and aggregated OCR budget. Another authorized test worker with the same key, original source, version and extraction profile can reuse previously completed shards and avoid repeating extraction/OCR.
+- Reuses existing page-range processing and aggregated OCR budget. Another authorized test worker with the same key, original source, version and extraction profile can reuse previously completed shards and avoid repeating extraction/OCR. The encrypted mode now completes and validates **all page checkpoints before any vector staging**, then indexes from a strict cached-only second pass. A missing shard stops indexing rather than silently re-extracting during publication.
 - Keeps the local private-directory checkpoint option intact, disabled remote mode by default. Does not change vector/answer behavior for ordinary users, and adds no SQL migrations.
 
 ## Safe opt-in (only for a NEW disposable test KB/job)

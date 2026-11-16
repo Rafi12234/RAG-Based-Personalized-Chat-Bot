@@ -30,6 +30,18 @@ class ShardTests(unittest.TestCase):
         return ShardCheckpointStore(self.root, version, self.digest, pages,
                                    shard_pages=shard)
 
+    def test_strict_cached_only_mode_rejects_incomplete_document(self):
+        store = self.store(pages=5, shard=2)
+        store.write(store.ranges[0], [
+            PageRecord(1, "first", "native"),
+            PageRecord(2, "second", "native"),
+        ])
+        def should_never_extract(*_):
+            self.fail("Missing checkpoint cannot start new extraction during indexing")
+        with self.assertRaisesRegex(ShardIntegrityError, "missing page shard"):
+            list(iter_checkpointed_pages(
+                store, should_never_extract, require_cached=True))
+
     def test_5000_pages_in_exact_shards(self):
         ranges = list(shard_ranges(5000, shard_pages=32))
         self.assertEqual(len(ranges), 157)

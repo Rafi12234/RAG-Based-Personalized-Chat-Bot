@@ -70,6 +70,34 @@ class PilotSafetyTests(unittest.TestCase):
                     worker.run_pilot_ingestion("test-job", max_ocr_pages=1)
                 inspect.assert_called_once_with("test-job")
 
+    def test_two_phase_preparation_finishes_before_indexing(self):
+        events = []
+        def make(cached):
+            events.append("cache-only" if cached else "extract")
+            return iter(range(3)) if not cached else iter(["indexed"])
+        def guard():
+            events.append("lease")
+            return True
+        result = worker._prepare_remote_pages_then_index(make, guard)
+        self.assertEqual(events, ["extract", "lease", "lease", "lease", "lease", "cache-only"])
+        self.assertEqual(list(result), ["indexed"])
+
+    def test_two_phase_preparation_does_not_index_partial_book(self):
+        def make(cached):
+            if cached:
+                self.fail("Indexing cannot begin after extraction fails")
+            yield 1
+            raise RuntimeError("interrupted OCR")
+        with self.assertRaisesRegex(RuntimeError, "interrupted OCR"):
+            worker._prepare_remote_pages_then_index(make, lambda: True)
+
+    def test_two_phase_preparation_checks_lease_before_indexing(self):
+        counter = iter([True, False])
+        with self.assertRaisesRegex(RuntimeError, "lease"):
+            worker._prepare_remote_pages_then_index(
+                lambda cached: iter([1]) if not cached else iter([]),
+                lambda: next(counter))
+
     def test_worker_remote_checkpoint_path_is_integrated(self):
         import tempfile
         from pathlib import Path
@@ -97,7 +125,7 @@ class PilotSafetyTests(unittest.TestCase):
             pages = list(worker._large_book_pdf_segments(pdf, **kwargs))
             self.assertEqual([p.page_number for p in pages], [1,2,3])
             self.assertEqual(len(client.objects), 1)
-            cached = list(worker._large_book_pdf_segments(pdf, **kwargs))
+            cached = list(worker._large_book_pdf_segments(pdf, **kwargs, require_cached=True))
             self.assertEqual([p.text for p in cached], [p.text for p in pages])
             self.assertEqual(client.writes, 1)
             self.assertTrue(all(p.needs_ocr is False for p in pages))

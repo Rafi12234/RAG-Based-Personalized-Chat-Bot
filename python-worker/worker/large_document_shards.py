@@ -212,6 +212,7 @@ def iter_checkpointed_pages(
     store: ShardCheckpointStore,
     extract: Callable[[int, int], Iterable[PageRecord]],
     *, max_ocr_pages: int = MAX_PAGES,
+    require_cached: bool = False,
 ) -> Iterator[PageRecord]:
     """Resume by shard, validating ALL pages before yielding each shard.
 
@@ -221,12 +222,16 @@ def iter_checkpointed_pages(
     """
     if type(max_ocr_pages) is not int or not 0 <= max_ocr_pages <= MAX_PAGES:
         raise ValueError("Invalid OCR page budget")
+    if type(require_cached) is not bool:
+        raise ValueError("require_cached must be boolean")
     if not callable(extract):
         raise TypeError("extract must be callable")
     total_ocr = 0
     for shard in store.ranges:
         cached = store.read(shard)
         if cached is None:
+            if require_cached:
+                raise ShardIntegrityError("Fully checkpointed document has a missing page shard")
             fresh = tuple(extract(shard.first, shard.last))
             store.write(shard, fresh)
             records = fresh

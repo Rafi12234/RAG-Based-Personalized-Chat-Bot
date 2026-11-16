@@ -233,7 +233,8 @@ def _large_book_pdf_segments(local_file: Path, *, version_id: str, language: str
                              max_ocr_pages: int, cache_root: Path | None,
                              remote_client=None, remote_bucket: str | None = None,
                              remote_identity=None, remote_key: bytes | None = None,
-                             remote_lease_guard=None):
+                             remote_lease_guard=None,
+                             require_cached: bool = False):
     """Stream original-numbered PDF pages through resumable 32-page checkpoints.
 
     This caches EXTRACTED PRIVATE TEXT on local disk. The caller is responsible
@@ -285,9 +286,31 @@ def _large_book_pdf_segments(local_file: Path, *, version_id: str, language: str
         ):
             mode = modes.pop(segment.page_number)
             yield PageRecord(segment.page_number, segment.text, mode)
-    for page in iter_checkpointed_pages(store, extract, max_ocr_pages=max_ocr_pages):
+    for page in iter_checkpointed_pages(store, extract, max_ocr_pages=max_ocr_pages,
+                                        require_cached=require_cached):
         yield ExtractedSegment(page.text, "pdf_page", page_number=page.page_number)
 
+
+
+def _prepare_remote_pages_then_index(factory, lease_guard):
+    """Complete every encrypted checkpoint BEFORE any embeddings/vector writes.
+
+    The returned iterator MUST be sourced from verified cached shards only.
+    A crashed extraction job can resume missing shards while it still has
+    ZERO staged vectors; a crash after staging still needs vector reconciliation.
+    """
+    if not callable(factory) or not callable(lease_guard):
+        raise TypeError("Factory and fresh processing lease guard required")
+    count = 0
+    for _ in factory(False):
+        if not lease_guard():
+            raise RuntimeError("Processing lease lost during checkpoint preparation")
+        count += 1
+    if not count:
+        raise RuntimeError("No PDF pages were checkpointed")
+    if not lease_guard():
+        raise RuntimeError("Processing lease lost before verified indexing")
+    return factory(True)
 
 def run_pilot_ingestion(job_id: str, *, language: str = "eng", max_ocr_pages: int = 10) -> dict:
     """Claim ONE eligible job and process through publication and DB completion.
@@ -361,8 +384,8 @@ def run_pilot_ingestion(job_id: str, *, language: str = "eng", max_ocr_pages: in
             if not heartbeat.check():
                 raise RuntimeError("Processing lease lost after document download")
             if ext == ".pdf" and large_mode:
-                segments = _large_book_pdf_segments(
-                    local_file, version_id=identity.document_version_id,
+                params = dict(
+                    version_id=identity.document_version_id,
                     language=language, max_ocr_pages=max_ocr_pages,
                     cache_root=Path(cache_root) if not remote_mode else None,
                     remote_client=s3 if remote_mode else None,
@@ -371,6 +394,18 @@ def run_pilot_ingestion(job_id: str, *, language: str = "eng", max_ocr_pages: in
                     remote_key=remote_key,
                     remote_lease_guard=guard if remote_mode else None,
                 )
+                if remote_mode:
+                    # First extraction checkpoint phase: no vectors are written
+                    # until every page is present and valid in encrypted RustFS.
+                    # Second pass reads cached shards only and fails closed if
+                    # any shard disappears before/during index publication.
+                    segments = _prepare_remote_pages_then_index(
+                        lambda cached: _large_book_pdf_segments(
+                            local_file, **params, require_cached=cached),
+                        guard,
+                    )
+                else:
+                    segments = _large_book_pdf_segments(local_file, **params)
             elif ext == ".pdf":
                 segments = iter_pdf_segments_with_ocr(
                     local_file, language=language, max_ocr_pages=max_ocr_pages,
