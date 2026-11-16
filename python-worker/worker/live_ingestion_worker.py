@@ -25,6 +25,10 @@ LARGE_BOOK_FLAG = "DOCMIND_ENABLE_LARGE_BOOK_PILOT"
 LARGE_BOOK_VALUE = "YES_FOR_TESTING"
 LARGE_BOOK_CACHE_ENV = "DOCMIND_LARGE_BOOK_CACHE_DIR"
 MAX_LARGE_BOOK_OCR_PAGES = 5_000
+# Separate opt-in: encrypted cross-worker RustFS page checkpoints, not vector recovery.
+REMOTE_CHECKPOINT_FLAG = "DOCMIND_ENABLE_ENCRYPTED_CHECKPOINTS"
+REMOTE_CHECKPOINT_VALUE = "YES_FOR_TESTING"
+REMOTE_CHECKPOINT_KEY_ENV = "DOCMIND_CHECKPOINT_AES256_KEY_B64"
 HEARTBEAT_INTERVAL_SECONDS = 30
 LEASE_SECONDS = 900
 
@@ -226,7 +230,10 @@ def _record_ids(embeddings, identity, heartbeat: LeaseHeartbeat, ids: list[str],
 
 
 def _large_book_pdf_segments(local_file: Path, *, version_id: str, language: str,
-                             max_ocr_pages: int, cache_root: Path):
+                             max_ocr_pages: int, cache_root: Path | None,
+                             remote_client=None, remote_bucket: str | None = None,
+                             remote_identity=None, remote_key: bytes | None = None,
+                             remote_lease_guard=None):
     """Stream original-numbered PDF pages through resumable 32-page checkpoints.
 
     This caches EXTRACTED PRIVATE TEXT on local disk. The caller is responsible
@@ -247,7 +254,26 @@ def _large_book_pdf_segments(local_file: Path, *, version_id: str, language: str
         if not 1 <= count <= MAX_PDF_PAGES:
             raise DocumentExtractionError("Large-book PDF page count exceeds limit")
 
-    store = ShardCheckpointStore(cache_root, version_id, source_sha256(local_file), count)
+    source_digest = source_sha256(local_file)
+    if remote_client is not None:
+        # Only the previously authorized MySQL-derived identity may establish
+        # tenant scope. This never trusts an organization ID from user input.
+        from .remote_document_shards import CheckpointScope, EncryptedS3ShardStore
+        if remote_identity is None or remote_identity.document_version_id != version_id:
+            raise ValueError("Missing verified document identity for checkpoint")
+        scope = CheckpointScope(
+            remote_identity.organization_id,
+            remote_identity.knowledge_base_id,
+            remote_identity.document_id,
+            version_id, source_digest, f"pymupdf-ocr-v1:{language}:180",
+        )
+        store = EncryptedS3ShardStore(
+            remote_client, remote_bucket, scope, remote_key, count,
+            lease_guard=remote_lease_guard)
+    else:
+        if cache_root is None:
+            raise ValueError("Local large-book checkpoint directory required")
+        store = ShardCheckpointStore(cache_root, version_id, source_digest, count)
     def extract(first: int, last: int):
         modes: dict[int, str] = {}
         # The aggregate OCR budget is verified across all previously cached
@@ -274,10 +300,17 @@ def run_pilot_ingestion(job_id: str, *, language: str = "eng", max_ocr_pages: in
     if os.environ.get(PILOT_FLAG) != PILOT_VALUE:
         raise RuntimeError("Pilot ingestion is disabled")
     large_mode = os.environ.get(LARGE_BOOK_FLAG) == LARGE_BOOK_VALUE
+    remote_mode = os.environ.get(REMOTE_CHECKPOINT_FLAG) == REMOTE_CHECKPOINT_VALUE
+    if remote_mode and not large_mode:
+        raise ValueError("Encrypted checkpoints require explicit large-book opt-in")
     if type(max_ocr_pages) is not int or not 1 <= max_ocr_pages <= (MAX_LARGE_BOOK_OCR_PAGES if large_mode else 10):
         raise ValueError("Pilot OCR pages must be 1..10, or 1..5000 with explicit large-book opt-in")
     cache_root = os.environ.get(LARGE_BOOK_CACHE_ENV)
-    if large_mode and (not cache_root or not Path(cache_root).is_absolute()):
+    remote_key = None
+    if remote_mode:
+        from .remote_document_shards import decode_checkpoint_key
+        remote_key = decode_checkpoint_key(os.environ.get(REMOTE_CHECKPOINT_KEY_ENV, ""))
+    elif large_mode and (not cache_root or not Path(cache_root).is_absolute()):
         raise ValueError("Large-book mode requires an absolute private checkpoint directory")
     from .ingestion_claim import claim_ingestion_job
     from .ingestion_lease_verification import make_fresh_lease_guard
@@ -331,7 +364,12 @@ def run_pilot_ingestion(job_id: str, *, language: str = "eng", max_ocr_pages: in
                 segments = _large_book_pdf_segments(
                     local_file, version_id=identity.document_version_id,
                     language=language, max_ocr_pages=max_ocr_pages,
-                    cache_root=Path(cache_root),
+                    cache_root=Path(cache_root) if not remote_mode else None,
+                    remote_client=s3 if remote_mode else None,
+                    remote_bucket=bucket if remote_mode else None,
+                    remote_identity=identity if remote_mode else None,
+                    remote_key=remote_key,
+                    remote_lease_guard=guard if remote_mode else None,
                 )
             elif ext == ".pdf":
                 segments = iter_pdf_segments_with_ocr(

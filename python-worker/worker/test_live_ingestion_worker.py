@@ -45,6 +45,64 @@ class PilotSafetyTests(unittest.TestCase):
                     worker.run_pilot_ingestion("test-job", max_ocr_pages=12)
                 inspect.assert_called_once_with("test-job")
 
+    def test_encrypted_remote_mode_requires_two_flags_and_valid_key(self):
+        import base64
+        env = {
+            worker.PILOT_FLAG: worker.PILOT_VALUE,
+            worker.LARGE_BOOK_FLAG: "",
+            worker.REMOTE_CHECKPOINT_FLAG: worker.REMOTE_CHECKPOINT_VALUE,
+            worker.REMOTE_CHECKPOINT_KEY_ENV: base64.b64encode(b"k" * 32).decode(),
+            worker.LARGE_BOOK_CACHE_ENV: "",
+        }
+        with patch.dict(os.environ, env):
+            with self.assertRaisesRegex(ValueError, "large-book opt-in"):
+                worker.run_pilot_ingestion("test-job", max_ocr_pages=1)
+        env[worker.LARGE_BOOK_FLAG] = worker.LARGE_BOOK_VALUE
+        env[worker.REMOTE_CHECKPOINT_KEY_ENV] = ""
+        with patch.dict(os.environ, env):
+            with self.assertRaisesRegex(ValueError, "key"):
+                worker.run_pilot_ingestion("test-job", max_ocr_pages=1)
+        env[worker.REMOTE_CHECKPOINT_KEY_ENV] = base64.b64encode(b"k" * 32).decode()
+        with patch.dict(os.environ, env):
+            with patch.object(worker, "_inspect_prerequisites",
+                              side_effect=RuntimeError("preflight-only")) as inspect:
+                with self.assertRaisesRegex(RuntimeError, "preflight-only"):
+                    worker.run_pilot_ingestion("test-job", max_ocr_pages=1)
+                inspect.assert_called_once_with("test-job")
+
+    def test_worker_remote_checkpoint_path_is_integrated(self):
+        import tempfile
+        from pathlib import Path
+        import pymupdf
+        from .remote_document_shards import EncryptedS3ShardStore
+        from .test_remote_document_shards import FakeS3
+
+        with tempfile.TemporaryDirectory() as tmp:
+            pdf = Path(tmp) / "sample.pdf"
+            with pymupdf.open() as document:
+                for i in range(3):
+                    page = document.new_page()
+                    page.insert_text((72, 72), f"Checkpoint integration test page {i+1}")
+                document.save(str(pdf))
+            client = FakeS3()
+            identity = SimpleNamespace(
+                organization_id="org_1", knowledge_base_id="kb_1",
+                document_id="doc_1", document_version_id="ver_1",
+            )
+            kwargs = dict(version_id="ver_1", language="eng", max_ocr_pages=3,
+                          cache_root=None, remote_client=client,
+                          remote_bucket="test-bucket", remote_identity=identity,
+                          remote_key=b"e" * 32,
+                          remote_lease_guard=lambda: True)
+            pages = list(worker._large_book_pdf_segments(pdf, **kwargs))
+            self.assertEqual([p.page_number for p in pages], [1,2,3])
+            self.assertEqual(len(client.objects), 1)
+            cached = list(worker._large_book_pdf_segments(pdf, **kwargs))
+            self.assertEqual([p.text for p in cached], [p.text for p in pages])
+            self.assertEqual(client.writes, 1)
+            self.assertTrue(all(p.needs_ocr is False for p in pages))
+            self.assertNotIn(b"Checkpoint integration", next(iter(client.objects.values())))
+
     def test_protected_knowledge_base_ineligible_for_pilot_claim(self):
         ctx, client = self._prereq_context()
         from .auto_ingestion_service import PROTECTED_QA_KBS
