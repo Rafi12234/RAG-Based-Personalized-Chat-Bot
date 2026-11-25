@@ -7,7 +7,7 @@ import {createRetrievalRouter,type RetrievalRouteDependencies} from "../src/rout
 import {ADVANCED_ENGINE_VERSION,parseAdvancedResponse} from "../src/services/advancedLive.js";
 import {HttpError,errorHandler} from "../src/lib/http.js";
 
-const KB="testkb0000000001",ORG="testorg000000001",DOC="testdoc000000001",VER="testver000000001";
+const KB="cmtestkb00000000000000001",ORG="cmtestorg0000000000000001",DOC="cmtestdoc0000000000000001",VER="cmtestver0000000000000001";
 const proof={documentId:DOC,documentVersionId:VER,documentTitle:"Book",generation:"a".repeat(64),revision:"1"};
 const citation={sourceId:"S1",documentId:DOC,documentVersionId:VER,documentTitle:"Book",
   chunkId:"123e4567-e89b-42d3-a456-426614174000",pageNumber:5,sourceLocator:"pdf:p00005:b00000",
