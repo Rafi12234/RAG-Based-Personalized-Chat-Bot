@@ -384,8 +384,7 @@ def run_pilot_ingestion(job_id: str, *, language: str = "eng", max_ocr_pages: in
             if not heartbeat.check():
                 raise RuntimeError("Processing lease lost after document download")
             # Only the explicit disposable advanced KB gets the additional verified index.
-            from .advanced_live_config import enabled_for
-            if enabled_for(identity.knowledge_base_id):
+            if os.environ.get("DOCMIND_ENABLE_ADVANCED_LIVE") == "YES_FOR_TESTING":
                 from .advanced_live_ingestion import prepare_advanced_if_selected
                 prepare_advanced_if_selected(qdrant, s3, bucket, local_file, identity, token,
                     guard=guard, language=language, max_ocr_pages=max_ocr_pages)

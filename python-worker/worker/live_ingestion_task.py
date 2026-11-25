@@ -14,4 +14,5 @@ from .live_ingestion_worker import PILOT_FLAG, PILOT_VALUE, run_pilot_ingestion
 def live_pilot_ingestion(job_id: str):
     if os.environ.get(PILOT_FLAG) != PILOT_VALUE:
         return {"job_id": job_id, "result": "disabled", "automatic_dispatcher_enabled": False}
-    return run_pilot_ingestion(job_id)
+    return run_pilot_ingestion(job_id, language=os.environ.get("DOCMIND_PILOT_OCR_LANGUAGE", "eng"),
+                               max_ocr_pages=int(os.environ.get("DOCMIND_PILOT_MAX_OCR_PAGES", "10")))

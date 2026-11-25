@@ -167,8 +167,10 @@ def _answer_response(answer,question,rows):
 
 
 def run(scope,question,top_k,operation):
-    if not enabled_for(scope.knowledge_base_id):
-        raise ShadowReadError("Advanced local pilot unavailable")
+    if (not enabled_for(scope.knowledge_base_id) or operation not in ("answer","retrieve") or
+            type(top_k) is not int or not 1<=top_k<=10 or not isinstance(question,str) or
+            not question.strip() or len(question)>1000):
+        raise ShadowReadError("Advanced local pilot unavailable or request invalid")
     if not _CACHE_LOCK.acquire(blocking=False):
         raise ShadowReadError("Advanced local capacity unavailable")
     try:

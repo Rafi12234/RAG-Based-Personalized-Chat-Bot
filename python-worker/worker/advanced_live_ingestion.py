@@ -6,7 +6,7 @@ deletion. Existing v1 completion remains the final READY fence.
 from pathlib import Path
 
 from .advanced_live_config import enabled_for,embedding_model,bundle_key
-from .advanced_live_bundle import write_bundle
+from .advanced_live_bundle import write_bundle, reserve_version
 from .document_structure import iter_pdf_page_structures, iter_docx_structure, _block, PdfPageStructure
 from .document_extraction import iter_extracted_segments
 from .document_ocr import iter_pdf_segments_with_ocr
@@ -42,7 +42,7 @@ def _pages(file,version,language,max_ocr_pages,guard):
 def _txt(file,version):
     for n,s in enumerate(iter_extracted_segments(file,"source.txt")):
         if s.text.strip():
-            yield _block(version,n,s.text,"txt_text",None,(),(),f"txt:block:{n:08d}")
+            yield _block(version,n,s.text,"txt_text",None,None,(),f"txt:block:{n:08d}")
 
 
 def build_ledger(file,identity,model,*,language,max_ocr_pages,guard):
@@ -98,6 +98,7 @@ def prepare_advanced_if_selected(client,s3,bucket,file,identity,token,*,guard,la
     passages,ledger=build_ledger(file,identity,model,language=language,max_ocr_pages=max_ocr_pages,guard=guard)
     if guard() is not True or client.count(collection_name=SHADOW_COLLECTION,count_filter=scope,exact=True).count!=0:
         raise RuntimeError("Advanced version scope is no longer empty")
+    reserve_version(s3,bucket,identity,token,model.pin.digest,key,guard=guard)
     stage_shadow_index(client,identity,ledger.manifest,iter_shadow_embeddings(passages,model),token,
                        lease_guard=guard)
     write_bundle(s3,bucket,identity,ledger,model.pin.digest,token,key,guard=guard)

@@ -79,3 +79,18 @@ def write_bundle(client,bucket,identity,ledger,pin,token,key,*,guard):
                       ContentType="application/octet-stream",IfNoneMatch="*")
     if read_bundle(client,bucket,*args,guard=guard)!=(ledger,token):
         raise RuntimeError("Advanced bundle read-back failed")
+
+
+def reserve_version(client,bucket,identity,token,pin,key,*,guard):
+    """Create-only version-level fence before any advanced vector writes."""
+    _scope(identity)
+    scope=(identity.organization_id,identity.knowledge_base_id,identity.document_id,identity.document_version_id)
+    if not all(SAFE_ID.fullmatch(s) for s in scope) or not isinstance(key,bytes) or len(key)!=32:
+        raise ValueError("Invalid reservation scope")
+    path="/".join(("docmind-private-advanced/v1",*scope,"reserved.aesgcm"))
+    nonce=os.urandom(12)
+    body=_canonical({"job":identity.job_id,"attempt":_digest(token),"model":pin})
+    _check(guard)
+    client.put_object(Bucket=bucket,Key=path,Body=MAGIC+nonce+AESGCM(key).encrypt(nonce,body,path.encode()),
+                      ContentType="application/octet-stream",IfNoneMatch="*")
+    _check(guard)

@@ -161,6 +161,16 @@ class RealMySQLReaderTests(unittest.TestCase):
         with self.assertRaises(reader.ShadowReadError):
             self.search()  # PROCESSING cannot be read.
         self.ready()
+        from .advanced_live_service import _discover, RequestScope
+        live_scope = RequestScope(self.session,i.organization_id,i.knowledge_base_id)
+        with patch("worker.db.get_connection", side_effect=self.factory):
+            rows = _discover(live_scope)
+            self.assertEqual(len(rows),1)
+            self.assertEqual(rows[0]["generation"],digest)
+            self.assertEqual(rows[0]["pin"],PIN)
+            self.assertEqual(rows[0]["revision"],1)
+            with self.assertRaises(reader.ShadowReadError):
+                _discover(replace(live_scope,session=replace(self.session,token_hash="0"*64)))
         hits = self.search()
         self.assertEqual(len(hits),2)
         self.assertEqual(hits[0].document_title,"CI book")
@@ -216,6 +226,9 @@ class RealMySQLReaderTests(unittest.TestCase):
             con.close()
         with self.assertRaises(reader.ShadowReadError):
             self.search()
+        with patch("worker.db.get_connection", side_effect=self.factory):
+            with self.assertRaises(reader.ShadowReadError):
+                _discover(live_scope)
 
 
 if __name__ == "__main__":
