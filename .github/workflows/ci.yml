@@ -105,3 +105,8 @@ jobs:
       - name: Phase 4.1 offline AI quality evaluator unit tests
         working-directory: python-worker
         run: python -m unittest worker.test_phase4_ai_quality worker.test_phase3_retrieval_quality
+      - name: Phase 4.3D local pinned model reference tests
+        working-directory: python-worker
+        run: |
+          python -m pip install 'numpy>=1.26,<3' 'onnxruntime>=1.20,<2' 'tokenizers>=0.20,<1' 'onnx>=1.17,<2'
+          python -m unittest worker.test_pinned_e5
