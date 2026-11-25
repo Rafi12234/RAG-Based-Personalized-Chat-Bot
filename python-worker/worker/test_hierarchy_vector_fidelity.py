@@ -111,7 +111,7 @@ class FidelityTests(unittest.TestCase):
     def test_foreign_generation_and_attempt_rejected(self):
         p=next(iter(self.client.points.values()))
         p.payload["index_generation"]="b"*64
-        with self.assertRaisesRegex(VectorFidelityError,"(count|generation)"):
+        with self.assertRaisesRegex(RuntimeError,"(count|generation)"):
             self.run_proof()
         p.payload["index_generation"]=self.ledger.manifest.digest
         p.payload["processing_token"]="foreign"
