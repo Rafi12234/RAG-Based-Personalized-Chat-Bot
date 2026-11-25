@@ -202,6 +202,9 @@ model ShadowIndexCandidate {
   sourceSha256      String   @db.Char(64)
   recordsSha256     String   @db.Char(64)
   passageCount      Int
+  modelPinSha256    String?  @db.Char(64)
+  attemptTokenSha256 String? @db.Char(64)
+  verifiedAttempt   Int?
   verifiedAt        DateTime @default(now())
   revokedAt         DateTime?
 
