@@ -37,7 +37,8 @@ creates exactly two new tables:
   source and ledger hashes, passage count and verification timestamp.
 - \`ShadowIndexSelection\`: a revocable, revision-checked pointer to one
   candidate for a document version. Its \`queryEnabled\` field is always
-  **FALSE** in Phase 4.3C. No reader uses this table yet.
+  **FALSE** in Phase 4.3C, enforced by a MySQL CHECK constraint. The selection
+  revision is likewise constrained to be nonnegative. No reader uses this table yet.
 
 \`worker/hierarchy_generation_registry.py\` provides isolated functions to
 register a candidate after **both** the prior text/structure audit and new

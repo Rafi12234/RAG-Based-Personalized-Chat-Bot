@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import re
+from math import isfinite
 from typing import Callable
 
 from .auto_ingestion_service import PROTECTED_QA_KBS
@@ -92,7 +93,9 @@ def _same_report(ledger: HierarchyLedger,
             vectors.points_verified != m.passage_count or
             not vectors.vectors_recomputed or
             vectors.query_enabled or vectors.authorized_to_publish or
-            vectors.min_cosine < MIN_COSINE):
+            not isinstance(vectors.min_cosine, (float, int)) or
+            not isfinite(float(vectors.min_cosine)) or
+            not MIN_COSINE <= float(vectors.min_cosine) <= 1.00001):
         raise RegistrySafetyError("Two independent shadow audits are required")
 
 

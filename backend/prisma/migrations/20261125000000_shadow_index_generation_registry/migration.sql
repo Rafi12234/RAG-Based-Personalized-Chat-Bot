@@ -26,6 +26,8 @@ CREATE TABLE `ShadowIndexSelection` (
   `revision` BIGINT NOT NULL DEFAULT 0,
   `queryEnabled` BOOLEAN NOT NULL DEFAULT false,
   `updatedAt` DATETIME(3) NOT NULL,
+  CONSTRAINT `ShadowIndexSelection_queryEnabled_disabled_ck` CHECK (`queryEnabled` = 0),
+  CONSTRAINT `ShadowIndexSelection_revision_nonnegative_ck` CHECK (`revision` >= 0),
 
   PRIMARY KEY (`documentVersionId`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

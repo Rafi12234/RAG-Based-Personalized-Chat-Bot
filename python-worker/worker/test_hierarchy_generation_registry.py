@@ -180,6 +180,8 @@ class RegistryTests(unittest.TestCase):
             {"source":replace(self.provenance,authorized_to_publish=True)},
             {"vectors":replace(self.vectors,points_verified=0)},
             {"vectors":replace(self.vectors,min_cosine=.5)},
+            {"vectors":replace(self.vectors,min_cosine=float("nan"))},
+            {"vectors":replace(self.vectors,min_cosine=float("inf"))},
             {"vectors":replace(self.vectors,vectors_recomputed=False)},
         ]
         for kw in cases:
