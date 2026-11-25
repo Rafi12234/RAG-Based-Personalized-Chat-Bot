@@ -31,10 +31,11 @@ candidate, activate shadow data or run jobs against protected QA knowledge bases
   production and protected QA scopes, uses the existing full source/vector
   audit and fixed 0.999 cosine minimum, and checks the processing lease
   before and after. Its in-memory receipt binds the artifact pin, source and
-  ledger hashes to the existing vector audit. It cannot publish or query.
+  ledger hashes to the existing vector audit and its organization/KB/document/version/job scope. It cannot publish or query.
 - CI executes the actual tokenizer and ONNX Runtime with a tiny deterministic
   synthetic token graph, testing padding invariance, verified-byte loading,
-  malformed pins, tampering, token/batch limits, and the audit boundary.
+  malformed pins, tampering, token/batch limits, and the audit boundary, including
+  a full staged fake-Qdrant generation scanned with real synthetic inference.
   The synthetic graph is not the actual multilingual E5 model.
 
 ## Operator notes and remaining gates
@@ -51,6 +52,8 @@ test command from python-worker is:
     python -m unittest worker.test_pinned_e5
 
 Tests additionally need the onnx package to construct the synthetic graph.
+General offline discovery skips these optional tests if dependencies are absent;
+CI explicitly imports the required runtime packages before running the tests.
 
 Before activation: verify the real E5 export and numerical equivalence on the
 actual target hardware, pin runtime and model provenance in durable

@@ -9,19 +9,27 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import numpy as np
-import onnx
-from onnx import TensorProto, helper
-from tokenizers import Tokenizer
-from tokenizers.models import WordLevel
-from tokenizers.pre_tokenizers import Whitespace
-from tokenizers.processors import TemplateProcessing
+try:
+    import numpy as np
+    import onnx
+    import onnxruntime
+    from onnx import TensorProto, helper
+    from tokenizers import Tokenizer
+    from tokenizers.models import WordLevel
+    from tokenizers.pre_tokenizers import Whitespace
+    from tokenizers.processors import TemplateProcessing
+    HAS_TEST_RUNTIME = True
+except ImportError:
+    HAS_TEST_RUNTIME = False
 
 from .pinned_e5 import ModelArtifactPin, ModelPinError, PinnedE5Model
 from .pinned_shadow_verification import verify_pinned_shadow
 from .qdrant_indexing import IndexIdentity
-from .hierarchy_vector_fidelity import VectorFidelityReport
-from .hierarchical_shadow import SHADOW_COLLECTION
+from .hierarchy_vector_fidelity import VectorFidelityReport, VectorFidelityError
+from .hierarchical_shadow import (SHADOW_COLLECTION, initialize_shadow_collection,
+                                  iter_shadow_embeddings, stage_shadow_index)
+from .test_hierarchical_shadow import MockModels
+from .test_hierarchy_vector_fidelity import NumericQdrant
 from .test_hierarchy_manifest_store import make_ledger
 from .auto_ingestion_service import PROTECTED_QA_KBS
 
@@ -70,6 +78,7 @@ def write_fixture(root):
     return pin, model_path, tokenizer_path
 
 
+@unittest.skipUnless(HAS_TEST_RUNTIME, "Install optional pinned-model test dependencies")
 class PinnedE5Tests(unittest.TestCase):
     def setUp(self):
         folder = tempfile.TemporaryDirectory()
@@ -130,6 +139,34 @@ class PinnedE5Tests(unittest.TestCase):
         with self.assertRaisesRegex(ModelPinError, "output"):
             PinnedE5Model(replace(self.pin, output_name="wrong"),
                           self.model_path, self.tokenizer_path)
+
+    def test_actual_shadow_proof_and_corrupted_vector(self):
+        model = self.load()
+        passages, ledger = make_ledger()
+        identity = IndexIdentity("org1", "kb1", "doc1", "ver", "job1", "book.pdf")
+        client = NumericQdrant()
+        with patch.dict(os.environ, {"DOCMIND_ENABLE_PINNED_SHADOW_AUDIT": "YES_FOR_TESTING",
+                                    "NODE_ENV": "test"}), patch(
+            "worker.hierarchical_shadow._models", return_value=MockModels), patch(
+            "worker.hierarchy_shadow_audit._models", return_value=MockModels):
+            initialize_shadow_collection(client, explicit_create=True)
+            stage_shadow_index(client, identity, ledger.manifest,
+                               iter_shadow_embeddings(passages, model),
+                               "token", lease_guard=lambda: True)
+            writes = client.upserts
+            receipt = verify_pinned_shadow(client, identity, ledger, "token", model,
+                                           lease_guard=lambda: True, batch_size=2)
+            self.assertEqual(receipt.report.points_verified, len(passages))
+            self.assertGreaterEqual(receipt.report.min_cosine, .999)
+            self.assertEqual(receipt.document_version_id, identity.document_version_id)
+            self.assertEqual(receipt.job_id, identity.job_id)
+            self.assertEqual(client.upserts, writes)
+            first = next(iter(client.points.values()))
+            first.vector = [0., 0., 1.] + [0.] * 381
+            with self.assertRaisesRegex(VectorFidelityError, "differs"):
+                verify_pinned_shadow(client, identity, ledger, "token", model,
+                                     lease_guard=lambda: True, batch_size=2)
+            self.assertEqual(client.upserts, writes)
 
     def test_receipt_bound_and_disabled_in_production(self):
         model = self.load()

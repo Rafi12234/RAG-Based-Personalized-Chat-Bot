@@ -21,6 +21,11 @@ from .qdrant_indexing import IndexIdentity
 
 @dataclass(frozen=True)
 class PinnedFidelityReceipt:
+    organization_id: str
+    knowledge_base_id: str
+    document_id: str
+    document_version_id: str
+    job_id: str
     source_sha256: str
     records_sha256: str
     artifact_pin_sha256: str
@@ -51,4 +56,6 @@ def verify_pinned_shadow(client, identity: IndexIdentity, ledger: HierarchyLedge
     if model.pin.digest != pin_digest or lease_guard() is not True:
         raise RuntimeError("Artifact identity or processing lease changed")
     return PinnedFidelityReceipt(
-        ledger.manifest.source_sha256, ledger.records_sha256, pin_digest, report)
+        identity.organization_id, identity.knowledge_base_id, identity.document_id,
+        identity.document_version_id, identity.job_id, ledger.manifest.source_sha256,
+        ledger.records_sha256, pin_digest, report)

@@ -109,4 +109,5 @@ jobs:
         working-directory: python-worker
         run: |
           python -m pip install 'numpy>=1.26,<3' 'onnxruntime>=1.20,<2' 'tokenizers>=0.20,<1' 'onnx>=1.17,<2'
-          python -m unittest worker.test_pinned_e5
+          python -c 'import numpy, onnx, onnxruntime, tokenizers'
+          python -m unittest -v worker.test_pinned_e5
