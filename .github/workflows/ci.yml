@@ -51,6 +51,16 @@ jobs:
         run: cd backend && npx prisma validate
       - name: Apply database migrations
         run: cd backend && npx prisma migrate deploy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Phase 4.3E isolated MySQL provenance and reader integration
+        working-directory: python-worker
+        env:
+          DOCMIND_SHADOW_SQL_CI: 'YES'
+        run: |
+          python -m pip install 'PyMySQL>=1.1,<2.0' 'PyMuPDF>=1.24,<2.0' 'python-docx>=1.1,<2.0' 'cryptography>=43,<47'
+          python -m unittest -v worker.test_shadow_reader_sql
       - name: Check backend and integration tests
         run: cd backend && npm run typecheck && npm run build && npm test
       - name: Phase 3.9 and 3.10 offline RAG security and grounding regressions
@@ -111,3 +121,6 @@ jobs:
           python -m pip install 'numpy>=1.26,<3' 'onnxruntime>=1.20,<2' 'tokenizers>=0.20,<1' 'onnx>=1.17,<2'
           python -c 'import numpy, onnx, onnxruntime, tokenizers'
           python -m unittest -v worker.test_pinned_e5
+      - name: Phase 4.3E permission-fenced shadow reader tests
+        working-directory: python-worker
+        run: python -m unittest -v worker.test_shadow_reader
