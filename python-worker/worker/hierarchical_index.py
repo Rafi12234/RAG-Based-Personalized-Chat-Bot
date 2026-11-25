@@ -211,6 +211,13 @@ def iter_hierarchical_passages(
                 parent_id = section_id or _id(version, "document-root")
             context = " > ".join(block.section_path)
             prefix = f"Section: {context}\n" if context and block.kind != "docx_heading" else ""
+        elif block.kind == "txt_text":
+            if block.page_number is not None or block.section_path or block.ordinal <= last_docx_ordinal:
+                raise HierarchyIntegrityError("TXT order or source position invalid")
+            last_docx_ordinal = block.ordinal
+            section_id = None
+            parent_id = _id(version, "txt-block", block.block_id)
+            prefix = ""
         else:
             raise HierarchyIntegrityError("Unsupported block format")
         if len(prefix) > MAX_CONTEXT_CHARS:

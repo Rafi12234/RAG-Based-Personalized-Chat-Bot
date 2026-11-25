@@ -6,7 +6,9 @@ type Citation = {
   documentId: string;
   documentTitle: string;
   pageNumber: number | null;
-  score: number;
+  score: number | null;
+  sourceLocator?: string;
+  quote?: string;
 };
 
 type AnswerResponse = {
@@ -194,6 +196,8 @@ export default function AnswerPanel({ knowledgeBaseId, knowledgeBaseName }: Prop
                     <li key={citation.sourceId + ":" + citation.documentId}>
                       <strong>[{citation.sourceId}]</strong> {citation.documentTitle}
                       {citation.pageNumber !== null && <span> · Page {citation.pageNumber}</span>}
+                      {citation.sourceLocator && <span> · {citation.sourceLocator}</span>}
+                      {citation.quote && <blockquote>{citation.quote}</blockquote>}
                     </li>
                   ))}
                 </ul>

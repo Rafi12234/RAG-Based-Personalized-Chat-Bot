@@ -15,6 +15,8 @@ import { currentUserId, requireAuth } from "../middleware/auth.js";
 import { accessibleKnowledgeBase } from "../middleware/organization.js";
 import { fetchInternalPoints } from "../services/retrievalClient.js";
 import { generateGroundedAnswer } from "../services/groundedAnswer.js";
+import { advancedEnabled, fetchAdvanced, type Operation, type AdvancedPublic } from "../services/advancedLive.js";
+import type { RetrievalRequest } from "../lib/retrievalValidation.js";
 
 export type RetrievalDocumentRecord = {
   id: string;
@@ -33,6 +35,8 @@ export type RetrievalRouteDependencies = {
   }>;
   searchPoints: (scope: TrustedRetrievalScope, question: string, topK: number) => Promise<RetrievedPoint[]>;
   loadDocuments: (scope: TrustedRetrievalScope, documentIds: string[]) => Promise<RetrievalDocumentRecord[]>;
+  advancedEnabled?: (kbId:string)=>boolean;
+  advanced?: (req:Request,kb:{id:string;organizationId:string},input:RetrievalRequest,operation:Operation)=>Promise<AdvancedPublic>;
   /** Only in offline tests: production never accepts a browser-supplied provider. */
   generateFromPrompt?: (prompt: string) => Promise<string>;
 };
@@ -42,6 +46,7 @@ const productionDependencies: RetrievalRouteDependencies = {
   identifyUser: currentUserId,
   authorizeKnowledgeBase: accessibleKnowledgeBase,
   searchPoints: fetchInternalPoints,
+  advancedEnabled, advanced: fetchAdvanced,
   async loadDocuments(scope, ids) {
     if (!ids.length) return [];
     return prisma.document.findMany({
@@ -106,6 +111,19 @@ async function verifiedSearch(deps: RetrievalRouteDependencies, req: Request): P
   return { question: input.question, sources, kb, userId };
 }
 
+async function maybeAdvanced(deps:RetrievalRouteDependencies,req:Request,operation:Operation){
+  const parsed=idSchema.safeParse(String(req.params.knowledgeBaseId??""));
+  if(!parsed.success)throw new HttpError(404,"Resource not found");
+  if(!deps.advancedEnabled?.(parsed.data))return null;
+  if(!deps.advanced)throw new HttpError(503,"Advanced local pilot unavailable");
+  const userId=deps.identifyUser(req);
+  const {kb}=await deps.authorizeKnowledgeBase(userId,parsed.data);
+  const input=parseRetrievalRequest(req.body);
+  const result=await deps.advanced(req,kb,input,operation);
+  await authorizeAgain(deps,userId,kb);
+  return result;
+}
+
 export function createRetrievalRouter(deps: RetrievalRouteDependencies = productionDependencies) {
   const router = Router();
   router.use(deps.authenticate);
@@ -114,12 +132,16 @@ export function createRetrievalRouter(deps: RetrievalRouteDependencies = product
 
   router.post("/:knowledgeBaseId/retrieve", retrievalLimiter, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
+    const advanced = await maybeAdvanced(deps, req, "retrieve");
+    if (advanced) { res.json({success:true,...advanced}); return; }
     const { sources } = await verifiedSearch(deps, req);
     res.json({ success: true, status: sources.length ? "retrieved" : "no_relevant_sources", sources });
   });
 
   router.post("/:knowledgeBaseId/answer", answerLimiter, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
+    const advanced = await maybeAdvanced(deps, req, "answer");
+    if (advanced) { res.json({success:true,...advanced}); return; }
     const { question, sources, kb, userId } = await verifiedSearch(deps, req);
     let resolution: AnswerResolutionCode | undefined;
     const generated = await generateGroundedAnswer(question, sources, deps.generateFromPrompt, code => {
