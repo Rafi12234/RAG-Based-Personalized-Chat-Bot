@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from heapq import nlargest
+from heapq import nsmallest
 from math import log1p, isfinite
 from types import MappingProxyType
 import unicodedata as ud
@@ -108,7 +108,12 @@ class BM25:
                 postings[word].append((p.id, count))
             # Route sections through unique indexed terms, not per-query scans.
             for word in set(terms(" ".join(p.section))):
-                section_postings[word].add((p.version_id, p.section))
+                key=(p.version_id,p.section)
+                if key not in section_postings[word]:
+                    total_posts += 1
+                    if total_posts > MAX_POSTINGS:
+                        raise ValueError("Lexical posting budget exceeded")
+                    section_postings[word].add(key)
             docs[p.id] = p
             lengths[p.id] = len(words)
         if not docs:
@@ -151,8 +156,7 @@ class BM25:
                     continue
                 norm = 1.2 * (.25 + .75 * self._lengths[key] / self._avg)
                 scores[key] += idf * tf * 2.2 / (tf + norm)
-        return tuple(sorted(nlargest(limit, scores, key=lambda k: (scores[k], k)),
-                            key=lambda k: (-scores[k], k)))
+        return tuple(nsmallest(limit, scores, key=lambda k: (-scores[k], k)))
 
 
 def reciprocal_rank_fusion(branches, *, limit: int = 50, k: int = 60):

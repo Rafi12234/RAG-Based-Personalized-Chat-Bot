@@ -35,7 +35,7 @@ def evidence_json(passages):
                        for p in passages],ensure_ascii=False,separators=(",",":"))
 
 
-def pack(question, ranked, docs, count_tokens, *, budget=3000, maximum=12):
+def pack(question, ranked, docs, count_tokens, *, budget=3000, maximum=12, neighbors=None):
     """Deduplicate, interleave pages/documents, expand immediate same-parent neighbors.
 
     count_tokens must be the exact generation tokenizer for the FULL serialized
@@ -48,14 +48,16 @@ def pack(question, ranked, docs, count_tokens, *, budget=3000, maximum=12):
         raise ValueError("Invalid context budget")
     # Build only a compact adjacency map; callers may precompute outside query.
     # Each passage has at most one previous/next neighbor within a parent.
-    next_id={}
-    for p in docs.values():
-        if p.previous in docs:
-            previous=docs[p.previous]
-            if (previous.version_id,previous.parent)==(p.version_id,p.parent):
-                if p.previous in next_id:
-                    raise RuntimeError("Ambiguous verified neighbor")
-                next_id[p.previous]=p.id
+    next_id=neighbors
+    if next_id is None:
+        next_id={}
+        for p in docs.values():
+            if p.previous in docs:
+                previous=docs[p.previous]
+                if (previous.version_id,previous.parent)==(p.version_id,p.parent):
+                    if p.previous in next_id:
+                        raise RuntimeError("Ambiguous verified neighbor")
+                    next_id[p.previous]=p.id
     primary=[]
     deferred=[]
     seen_pages=set()

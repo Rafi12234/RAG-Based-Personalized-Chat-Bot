@@ -124,3 +124,9 @@ jobs:
       - name: Phase 4.3E permission-fenced shadow reader tests
         working-directory: python-worker
         run: python -m unittest -v worker.test_shadow_reader
+      - name: Phase 4.4–4.7 advanced retrieval and grounding regressions
+        working-directory: python-worker
+        run: python -m unittest -v worker.test_advanced_rag worker.test_local_pair_model
+      - name: Phase 4.8 500, 2000 and 5000-page native PDF scale smoke
+        working-directory: python-worker
+        run: python -m worker.advanced_scale_smoke

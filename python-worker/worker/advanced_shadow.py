@@ -182,7 +182,10 @@ class AdvancedShadowSession:
         t1=perf_counter()
         lexical=self._index.rank(question)
         routed=self._index.rank(question,sections=True)
-        hybrid=reciprocal_rank_fusion([(dense,1.),(lexical,1.),(routed,.35)],limit=50)
+        fused=reciprocal_rank_fusion([(dense,1.),(lexical,1.),(routed,.35)],limit=50)
+        # Preserve a bounded set of lexical-only candidates for reranking;
+        # never let a strong dense/routed overlap erase rare identifier hits.
+        hybrid=tuple(dict.fromkeys((*fused,*lexical[:15],*dense[:15])))[:80]
         t2=perf_counter()
         if reranker is not None:
             if type(reranker) is not LocalPairModel or reranker.pin.labels!=("relevance",):

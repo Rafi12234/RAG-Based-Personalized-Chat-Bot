@@ -91,7 +91,8 @@ class LocalPairModel:
                     any(not isinstance(t,str) or not t.strip() or len(t)>4000 for t in pair)):
                 raise ModelPinError("Invalid pair")
             e = self.tok.encode(pair[0],pair[1],add_special_tokens=True)
-            if not 1 <= len(e.ids) <= 512 or any(v!=1 for v in e.attention_mask):
+            if (not 1 <= len(e.ids) <= 512 or len(e.type_ids)!=len(e.ids) or
+                    len(e.attention_mask)!=len(e.ids) or any(v!=1 for v in e.attention_mask)):
                 raise ModelPinError("Pair token budget exceeded")
             enc.append(e)
         shape = (len(enc),max(len(e.ids) for e in enc))
