@@ -1,0 +1,43 @@
+{
+  "e5": {
+    "revision": "REPLACE_WITH_TRUSTED_40_HEX_REVISION",
+    "onnx_sha256": "REPLACE_WITH_TRUSTED_SHA256",
+    "tokenizer_sha256": "REPLACE_WITH_TRUSTED_SHA256",
+    "onnx_path": "C:/private-models/e5/model.onnx",
+    "tokenizer_path": "C:/private-models/e5/tokenizer.json",
+    "output_name": "last_hidden_state"
+  },
+  "reranker": {
+    "model_id": "REPLACE_WITH_APPROVED_MULTILINGUAL_RERANKER",
+    "revision": "REPLACE_WITH_TRUSTED_40_HEX_REVISION",
+    "onnx_sha256": "REPLACE_WITH_TRUSTED_SHA256",
+    "tokenizer_sha256": "REPLACE_WITH_TRUSTED_SHA256",
+    "onnx_path": "C:/private-models/reranker/model.onnx",
+    "tokenizer_path": "C:/private-models/reranker/tokenizer.json",
+    "labels": [
+      "relevance"
+    ]
+  },
+  "nli": {
+    "model_id": "REPLACE_WITH_APPROVED_MULTILINGUAL_NLI",
+    "revision": "REPLACE_WITH_TRUSTED_40_HEX_REVISION",
+    "onnx_sha256": "REPLACE_WITH_TRUSTED_SHA256",
+    "tokenizer_sha256": "REPLACE_WITH_TRUSTED_SHA256",
+    "onnx_path": "C:/private-models/nli/model.onnx",
+    "tokenizer_path": "C:/private-models/nli/tokenizer.json",
+    "labels": [
+      "entailment",
+      "neutral",
+      "contradiction"
+    ]
+  },
+  "generator": {
+    "model": "REPLACE_WITH_EXACT_OLLAMA_TAG",
+    "digest": "REPLACE_WITH_TRUSTED_OLLAMA_DIGEST",
+    "tokenizer_path": "C:/private-models/generator/tokenizer.json",
+    "tokenizer_sha256": "REPLACE_WITH_TRUSTED_SHA256",
+    "context": 4096,
+    "predict": 384,
+    "special_token_offset": 0
+  }
+}
