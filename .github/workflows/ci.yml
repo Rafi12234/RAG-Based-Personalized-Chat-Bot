@@ -99,6 +99,9 @@ jobs:
       - name: Phase 4.3B encrypted manifests and read-only shadow integrity audit
         working-directory: python-worker
         run: python -m unittest worker.test_hierarchy_manifest_store worker.test_hierarchy_shadow_audit
+      - name: Phase 4.3C full E5 vector fidelity and revocable candidate registry
+        working-directory: python-worker
+        run: python -m unittest worker.test_hierarchy_vector_fidelity worker.test_hierarchy_generation_registry
       - name: Phase 4.1 offline AI quality evaluator unit tests
         working-directory: python-worker
         run: python -m unittest worker.test_phase4_ai_quality worker.test_phase3_retrieval_quality

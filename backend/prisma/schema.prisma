@@ -141,6 +141,8 @@ model DocumentVersion {
 
   document Document       @relation(fields: [documentId], references: [id])
   jobs     IngestionJob[]
+  shadowIndexCandidates ShadowIndexCandidate[]
+  shadowIndexSelection  ShadowIndexSelection?
 
   @@unique([documentId, version])
   @@index([status])
@@ -185,3 +187,37 @@ model IngestionJob {
   @@index([status, processingLeaseUntil])
 }
 
+
+
+// Phase 4.3C: additive, operator-only v2 shadow-generation registry.
+// These records do NOT enable v2 query traffic or change v1/READY state.
+// The source ledger lives encrypted in RustFS, not in a relational text field.
+model ShadowIndexCandidate {
+  documentVersionId String
+  generationDigest  String   @db.Char(64)
+  organizationId    String
+  knowledgeBaseId   String
+  documentId        String
+  jobId             String
+  sourceSha256      String   @db.Char(64)
+  recordsSha256     String   @db.Char(64)
+  passageCount      Int
+  verifiedAt        DateTime @default(now())
+  revokedAt         DateTime?
+
+  documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+
+  @@id([documentVersionId, generationDigest])
+  @@index([organizationId, knowledgeBaseId])
+  @@index([documentVersionId, revokedAt])
+}
+
+model ShadowIndexSelection {
+  documentVersionId String   @id
+  generationDigest  String?  @db.Char(64)
+  revision          BigInt   @default(0)
+  queryEnabled      Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+
+  documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+}
