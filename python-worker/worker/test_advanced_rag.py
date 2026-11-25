@@ -88,6 +88,8 @@ class Algorithms(unittest.TestCase):
                          "unsupported_numeric_fact")
         self.assertEqual(verify_draft(draft("fee 40",("a","forged 40")), [a],model).reason,"unverified_quote")
         self.assertEqual(verify_draft(draft("fee 40",("fake",b.text)),[b],model).reason,"unverified_quote")
+        ambiguous=p("overlap","aaaaa")
+        self.assertEqual(verify_draft(draft("aaaa",("overlap","aaaa")),[ambiguous],model).reason,"unverified_quote")
 
     def test_negation_conflict_malformed_injection_and_service_error(self):
         a=p("a","Access is not permitted.")

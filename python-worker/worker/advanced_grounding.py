@@ -125,7 +125,8 @@ def verify_draft(raw,passages,nli):
             p=by_id.get(c["id"])
             quote=c["quote"]
             if (p is None or p.id in ids or not isinstance(quote,str) or len(quote)>950
-                    or len(quote.strip())<4 or p.text.count(quote)!=1):
+                    or len(quote.strip())<4 or p.text.find(quote)<0
+                    or p.text.find(quote)!=p.text.rfind(quote)):
                 return abstain("unverified_quote")
             ids.add(p.id)
             offset=p.text.index(quote)

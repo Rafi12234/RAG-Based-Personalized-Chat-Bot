@@ -38,6 +38,7 @@ class Retrieval:
     hybrid: tuple[str, ...]
     reranked: tuple[str, ...]
     language: str
+    reranker_used: bool
     timings_ms: tuple[tuple[str,float], ...]
 
 
@@ -195,7 +196,7 @@ class AdvancedShadowSession:
             ranked=hybrid[:40]
         t3=perf_counter()
         self.assert_current()
-        return Retrieval(dense,lexical,hybrid,ranked,language(question),
+        return Retrieval(dense,lexical,hybrid,ranked,language(question),reranker is not None,
                          (("dense",(t1-start)*1000),("hybrid",(t2-t1)*1000),
                           ("rerank",(t3-t2)*1000)))
 

@@ -22,7 +22,7 @@ def normalize(text: str) -> str:
     for c in text:
         if c in ("\u200c", "\u200d", "\u200b", "\ufeff"):
             continue
-        if c.category() == "Nd":
+        if ud.category(c) == "Nd":
             c = str(ud.decimal(c))
         result.append(c)
     return ud.normalize("NFC", "".join(result))
