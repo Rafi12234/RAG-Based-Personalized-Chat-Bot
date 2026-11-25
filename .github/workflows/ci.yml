@@ -96,6 +96,9 @@ jobs:
       - name: Phase 4.3A hierarchical passages and isolated shadow-index staging
         working-directory: python-worker
         run: python -m unittest worker.test_hierarchical_index worker.test_hierarchical_shadow
+      - name: Phase 4.3B encrypted manifests and read-only shadow integrity audit
+        working-directory: python-worker
+        run: python -m unittest worker.test_hierarchy_manifest_store worker.test_hierarchy_shadow_audit
       - name: Phase 4.1 offline AI quality evaluator unit tests
         working-directory: python-worker
         run: python -m unittest worker.test_phase4_ai_quality worker.test_phase3_retrieval_quality
